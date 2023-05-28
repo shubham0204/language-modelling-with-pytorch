@@ -1,4 +1,5 @@
 from torch import nn
+import numpy as np
 import torch
 
 class DotProductAttention( nn.Module ):
@@ -11,9 +12,8 @@ class DotProductAttention( nn.Module ):
         self.values = nn.Linear(embedding_dim, head_dim)
         self.softmax = nn.Softmax( dim=-1 )
 
-    def forward( self , inputs , mask ):
+    def forward( self , inputs ):
         # inputs : ( B , seq_length , embedding_dim )
-        # mask : ( B , seq_length , embedding_dim )
 
         K = self.keys(inputs)      # keys    : ( B , seq_length , head_dim )
         Q = self.queries( inputs ) # queries : ( B , seq_length , head_dim )
@@ -22,10 +22,6 @@ class DotProductAttention( nn.Module ):
         # SA : ( B , seq_length , seq_length )
         # Attention weights
         SA = self.softmax(torch.matmul( Q , K.transpose( -2 , -1 ) ) * self.head_dims ** (-0.5))
-
-        # mask : ( B , 1 , seq_length )
-        mask = torch.reshape( mask , shape=( SA.shape[0] , 1 , SA.shape[2] ) )
-        SA = torch.masked_fill( SA , mask == 0 , -1e9 )
 
         return torch.matmul( SA , V ) # Output: ( B , seq_length , head_dim )
 
@@ -37,10 +33,9 @@ class MultiHeadAttention( nn.Module ):
         self.proj = nn.Linear(num_heads * head_dim, embedding_dim)
         self.dropout = nn.Dropout( dropout )
 
-    def forward( self , inputs , mask ):
+    def forward( self , inputs ):
         # inputs : ( B , seq_length , embedding_dim )
-        # mask : ( B , seq_length )
-        concat_heads = torch.concat( [ self_attention( inputs , mask ) for self_attention in self.heads ] , dim=-1 )
+        concat_heads = torch.concat( [ self_attention( inputs ) for self_attention in self.heads ] , dim=-1 )
         # concat_heads : ( B , seq_length , num_heads * head_dim )
         output = self.dropout( self.proj( concat_heads ) )
         # output: ( B , seq_length , embedding_dim )
@@ -74,27 +69,55 @@ class Block( nn.Module ):
         x = x + self.feed_forward( self.layer_norm_2( x ) )
         return x
 
+class TokenEmbedding( nn.Module ):
+
+    def __init__( self , vocab_size , embedding_dim ):
+        super( TokenEmbedding , self ).__init__()
+        self.embedding = nn.Embedding( vocab_size , embedding_dim )
+
+    def forward( self , inputs ):
+        return self.embedding( inputs )
+
+class PositionalEncoding( nn.Module ):
+
+    def __init__( self , seq_length , embedding_dim ):
+        super( PositionalEncoding , self ).__init__()
+        self.seq_length = seq_length
+        self.positional_encoding = nn.Embedding( seq_length , embedding_dim )
+
+    def forward( self , inputs ):
+        return inputs + self.positional_encoding( torch.arange( seq_length ) )
+
 class Transformer( nn.Module ):
 
-    def __init__( self , vocab_size , embedding_dims ):
+    def __init__( self , vocab_size , embedding_dim , seq_length , num_blocks , num_heads_in_block ):
         super( Transformer , self ).__init__()
-        self.token_embedding_table = nn.Embedding( vocab_size , embedding_dims )
-        self.position_embedding_table = nn.Embedding( vocab_size , embedding_dims )
-        self.blocks = nn.Sequential( *[ ] )
+        self.token_embedding = TokenEmbedding( vocab_size , embedding_dim )
+        self.pos_encoding = PositionalEncoding( seq_length , embedding_dim )
+        self.blocks = nn.Sequential( *[ Block( embedding_dim , num_heads_in_block ) for _ in range( num_blocks ) ] )
+        self.layer_norm = nn.LayerNorm( embedding_dim )
+        self.model_head = nn.Linear( embedding_dim , vocab_size )
+
+    def forward( self , inputs ):
+        # inputs : ( B , seq_length )
+        token_embeddings = self.token_embedding( inputs )
+        x = self.pos_encoding( token_embeddings )
+        x = self.blocks( x )
+        x = self.layer_norm( x )
+        logits = self.model_head( x )
+        return logits
+
+
+
 
 B = 32
 seq_length = 10
 embedding_dim = 1024
 head_dim = 24
 num_heads = 14
+vocab_size = 10000
 
-layer = Block( 1024 , 4 )
-inputs = torch.randn( size=( 10 , 1024 ) )
-
-outputs = layer( inputs )
+model = Transformer( vocab_size , embedding_dim , seq_length , num_blocks=5 , num_heads_in_block=num_heads )
+inputs = torch.randint( low=1 , high=vocab_size , size=( B , seq_length ) )
+outputs = model( inputs )
 print( outputs.shape )
-
-layer2 = MultiHeadAttention( 1024 , num_heads , head_dim )
-inputs2 = torch.randn( size=( B , seq_length , embedding_dim ) )
-print( layer2( inputs2 ).shape )
-print( layer2( inputs2 ).shape )
