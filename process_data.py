@@ -48,6 +48,7 @@ def process_data( data_dir : str , output_dir : str ):
     word_to_index = dict( zip( vocab , range( len(vocab) ) ) )
     save_dict_as_pickle( index_to_word , os.path.join( output_dir , "idx_to_word.pkl" ) )
     save_dict_as_pickle( word_to_index , os.path.join( output_dir , "word_to_idx.pkl" ) )
+    print( "Vocab Size:" , len( word_to_index ) )
 
     idx_tokenized_sentences = [ [ word_to_index[ word ] for word in sentence ] for sentence in tokenized_sentences ]
     n_gram_sequences = []

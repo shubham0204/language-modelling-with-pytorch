@@ -1,8 +1,7 @@
-`layers.py`: Added `TokenEmbedding`, `PositionalEncoding` and 
-`Transformer` modules.
+`train.py`: Completed training pipeline, integrated `wandb`
+tracking
 
-`utils.py`: Added `Predictor` class to generate output 
-sequences given the model.
+`loss.py`: Created new `sparse_crossentropy_with_logits` loss 
+function
 
-`train.py`: Added `make_data_loaders` for returning data 
-processing loaders.
+`process_data.py`: Prints vocab size now
