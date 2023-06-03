@@ -1,7 +1,14 @@
-`train.py`: Completed training pipeline, integrated `wandb`
-tracking
+`config.py`: Reads global configuration from 
+`project_config.toml`
 
-`loss.py`: Created new `sparse_crossentropy_with_logits` loss 
-function
+`process_data.py`: Removed command-line arguments 
+and added config-based parameters
 
-`process_data.py`: Prints vocab size now
+`train.py`: Removed command-line arguments 
+and added config-based parameters
+
+`predict.py`: Removed command-line arguments 
+and added config-based parameters
+
+`utils.py`: `input_seq` gets converted to a `torch.Tensor` 
+and again to `list` for appending predicted tokens

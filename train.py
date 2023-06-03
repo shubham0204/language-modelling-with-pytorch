@@ -1,5 +1,5 @@
 from layers import Transformer
-from utils import save_dict_as_pickle , load_dict_from_pickle
+from config import load_global_config
 from loss import sparse_crossentropy_with_logits
 from torch.utils.data import TensorDataset , DataLoader , random_split
 from torch import nn
@@ -10,6 +10,18 @@ import os
 import datetime
 
 wandb.login()
+config = load_global_config()
+data_config = config.data
+train_config = config.train
+model_config = config.model
+
+def get_checkpoint_path():
+    checkpoints_path = train_config.checkpoint_path
+    if train_config.checkpoint_path == "auto":
+        checkpoints_path = datetime.datetime.now().strftime("%H_%M_%d_%m_%Y")
+    if not os.path.exists(checkpoints_path):
+        os.makedirs(checkpoints_path)
+    return checkpoints_path
 
 def make_data_loaders( data_tensors_path : str , test_split : float = 0.3 , batch_size : int = 128 ):
     inputs = torch.load( os.path.join( data_tensors_path , "inputs.pt" ) )
@@ -55,54 +67,45 @@ def test_epoch( model , test_ds_loader ):
     avg_acc /= len( test_ds_loader )
     return avg_loss , avg_acc
 
-model_config = {
-    "vocab_size" : 5589 ,
-    "embedding_dim" : 64 ,
-    "seq_length" : 10 ,
-    "num_blocks" : 2 ,
-    "num_heads_in_block" : 3
-}
+def train():
 
-def train(
-        data_tensors_path ,
-        num_epochs ,
-        batch_size : int = 128 ,
-        test_split : float = 0.3 ,
-        checkpoints_path : str = None ,
-        tracking_enabled = False
-):
-    if checkpoints_path is None:
-        checkpoints_path = datetime.datetime.now().strftime( "%H_%M_%d_%m_%Y" )
-    if not os.path.exists( checkpoints_path ):
-        os.makedirs( checkpoints_path )
+    train_ds_loader , test_ds_loader = make_data_loaders(
+        data_config.data_tensors_path ,
+        data_config.test_split ,
+        train_config.batch_size
+    )
+    ckpt_path = get_checkpoint_path()
 
-    train_ds_loader , test_ds_loader = make_data_loaders( data_tensors_path , test_split , batch_size )
-    model = Transformer( **model_config )
+    model = Transformer(
+        vocab_size=data_config.vocab_size ,
+        embedding_dim=model_config.embedding_dim ,
+        seq_length=data_config.seq_length ,
+        num_blocks=model_config.num_blocks ,
+        num_heads_in_block=model_config.num_heads_in_block
+    )
     optimizer = torch.optim.Adam( model.parameters() , lr=0.001 )
 
-    training_config = {
-        "batch_size" : batch_size ,
-        "num_epochs" : num_epochs
-    }
-
-    if tracking_enabled:
+    if train_config.wandb_logging_enabled:
         wandb.init(
-            project="Poem_Maker_Transformer",
-            config=model_config.update(training_config)
+            project=train_config.wandb_project_name ,
+            config=model_config.update( train_config )
         )
 
-    for e in range( num_epochs ):
+    for e in range( train_config.num_epochs ):
         print( f"--------- EPOCH {e + 1} -----------" )
         train_loss , train_acc = train_epoch( model , train_ds_loader , optimizer )
         val_loss , val_acc = test_epoch( model , test_ds_loader )
-        if tracking_enabled:
+        if train_config.wandb_logging_enabled:
             wandb.log( {
                     "loss" : train_loss ,
                     "acc" : train_acc ,
                     "val_loss" : val_loss ,
                     "val_acc" : val_acc
                 } )
-        torch.save( model , "model_{}.pt".format( e + 1 ) )
+        torch.save(
+            model ,
+            os.path.join( ckpt_path , "model_{}.pt".format( e + 1 ) )
+        )
         print("{} loss={:.5f}, acc={:.5f} , val_loss={:.5f}, val_acc={:.5f}"
               .format(e + 1 , train_loss , train_acc , val_loss , val_acc ) )
 

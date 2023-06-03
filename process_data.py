@@ -1,8 +1,12 @@
 from utils import save_dict_as_pickle
+from config import load_global_config , save_global_config
 import fire
 import torch
 import os
 import re
+
+config = load_global_config()
+data_config = config.data
 
 def filter_token( text_token : str ):
     return re.sub(r"\W+", "", text_token)
@@ -29,7 +33,9 @@ def make_sequences( sequence , input_length ):
         sequences.append( [sequence[i: i + input_length] , sequence[i + input_length]] )
     return sequences
 
-def process_data( data_dir : str , output_dir : str ):
+def process_data():
+    data_dir = data_config.data_path
+    output_dir = data_config.data_tensors_path
     txt_files = os.listdir( data_dir )
 
     if not os.path.exists( output_dir ):
@@ -48,7 +54,8 @@ def process_data( data_dir : str , output_dir : str ):
     word_to_index = dict( zip( vocab , range( len(vocab) ) ) )
     save_dict_as_pickle( index_to_word , os.path.join( output_dir , "idx_to_word.pkl" ) )
     save_dict_as_pickle( word_to_index , os.path.join( output_dir , "word_to_idx.pkl" ) )
-    print( "Vocab Size:" , len( word_to_index ) )
+    config.data.vocab_size = len( index_to_word )
+    save_global_config( config )
 
     idx_tokenized_sentences = [ [ word_to_index[ word ] for word in sentence ] for sentence in tokenized_sentences ]
     n_gram_sequences = []
