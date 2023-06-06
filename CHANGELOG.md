@@ -1,14 +1,6 @@
-`config.py`: Reads global configuration from 
-`project_config.toml`
+`download_dataset.sh`: Bash script to download, unzip and 
+organize dataset files from Kaggle
 
-`process_data.py`: Removed command-line arguments 
-and added config-based parameters
+`train.py`: Added `device` for GPU computation
 
-`train.py`: Removed command-line arguments 
-and added config-based parameters
-
-`predict.py`: Removed command-line arguments 
-and added config-based parameters
-
-`utils.py`: `input_seq` gets converted to a `torch.Tensor` 
-and again to `list` for appending predicted tokens
+`project_config.toml`: Removed `pytorch.device` attribute

@@ -1,6 +1,3 @@
-[pytorch]
-device = ""
-
 [data]
 vocab_size = 5589
 seq_length = 10

@@ -14,6 +14,7 @@ config = load_global_config()
 data_config = config.data
 train_config = config.train
 model_config = config.model
+device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
 
 def get_checkpoint_path():
     checkpoints_path = train_config.checkpoint_path
@@ -37,6 +38,7 @@ def train_epoch( model , train_ds_loader , optimizer ):
     avg_loss = 0.0
     avg_acc = 0.0
     for batch_idx , ( inputs , outputs ) in enumerate( train_ds_loader ):
+        inputs , outputs = inputs.to( device ) , outputs.to( device )
         optimizer.zero_grad()
         preds = model( inputs )
         preds = preds[ : , -1 , : ]
@@ -45,8 +47,8 @@ def train_epoch( model , train_ds_loader , optimizer ):
         optimizer.step()
         preds = torch.argmax( torch.nn.functional.softmax( preds , dim=1 ) , dim=1 )
         acc = torch.mean( torch.eq( preds , outputs[ : , -1 ] ).float() )
-        avg_loss += loss.item()
-        avg_acc += acc.item()
+        avg_loss += loss.cpu().item()
+        avg_acc += acc.cpu().item()
     avg_loss /= len( train_ds_loader )
     avg_acc /= len( train_ds_loader )
     return avg_loss , avg_acc
@@ -56,13 +58,14 @@ def test_epoch( model , test_ds_loader ):
     avg_loss = 0.0
     avg_acc = 0.0
     for batch_idx , ( inputs , outputs ) in enumerate( test_ds_loader ):
+        inputs, outputs = inputs.to(device), outputs.to(device)
         preds = model( inputs )
         preds = preds[ : , -1 , : ]
         loss = sparse_crossentropy_with_logits( preds , outputs )
         preds = torch.argmax( torch.nn.functional.softmax( preds , dim=1 ) , dim=1 )
         acc = torch.mean( torch.eq( preds , outputs[ : , -1 ] ).float() )
-        avg_loss += loss.item()
-        avg_acc += acc.item()
+        avg_loss += loss.cpu().item()
+        avg_acc += acc.cpu().item()
     avg_loss /= len( test_ds_loader )
     avg_acc /= len( test_ds_loader )
     return avg_loss , avg_acc
@@ -83,6 +86,7 @@ def train():
         num_blocks=model_config.num_blocks ,
         num_heads_in_block=model_config.num_heads_in_block
     )
+    model.to( device )
     optimizer = torch.optim.Adam( model.parameters() , lr=0.001 )
 
     if train_config.wandb_logging_enabled:
