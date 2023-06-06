@@ -86,7 +86,8 @@ class PositionalEncoding( nn.Module ):
         self.positional_encoding = nn.Embedding( seq_length , embedding_dim )
 
     def forward( self , inputs ):
-        return inputs + self.positional_encoding( torch.arange( seq_length ) )
+        # TODO: Change here to dynamically choose device
+        return inputs + self.positional_encoding( torch.arange( self.seq_length , device="cuda" ) )
 
 class Transformer( nn.Module ):
 
@@ -107,17 +108,15 @@ class Transformer( nn.Module ):
         logits = self.model_head( x )
         return logits
 
+if __name__ == "__main__":
+    B = 32
+    seq_length = 10
+    embedding_dim = 1024
+    head_dim = 24
+    num_heads = 14
+    vocab_size = 10000
 
-
-
-B = 32
-seq_length = 10
-embedding_dim = 1024
-head_dim = 24
-num_heads = 14
-vocab_size = 10000
-
-model = Transformer( vocab_size , embedding_dim , seq_length , num_blocks=5 , num_heads_in_block=num_heads )
-inputs = torch.randint( low=1 , high=vocab_size , size=( B , seq_length ) )
-outputs = model( inputs )
-print( outputs.shape )
+    model = Transformer( vocab_size , embedding_dim , seq_length , num_blocks=5 , num_heads_in_block=num_heads )
+    inputs = torch.randint( low=1 , high=vocab_size , size=( B , seq_length ) )
+    outputs = model( inputs )
+    print( outputs.shape )

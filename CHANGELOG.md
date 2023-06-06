@@ -1,6 +1,5 @@
-`download_dataset.sh`: Bash script to download, unzip and 
-organize dataset files from Kaggle
+`layers.py`: Added `device` to `PositionalEmbedding` module
 
-`train.py`: Added `device` for GPU computation
+`predict.py`: Added CUDA support for inference
 
-`project_config.toml`: Removed `pytorch.device` attribute
+`setup_env.sh`: Downloads dependencies from PyPI, checkout GitHub repo

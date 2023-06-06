@@ -4,10 +4,12 @@ import torch
 
 class Predictor:
 
-    def __init__( self , model , idx_to_word , word_to_idx ):
+    def __init__( self , model , idx_to_word , word_to_idx , device ):
         self.model = model
         self.idx_to_word = idx_to_word
         self.word_to_idx = word_to_idx
+        self.device = device
+        self.model.to( self.device )
 
     @torch.no_grad()
     def predict_next_word(self, input_seq):
@@ -20,7 +22,7 @@ class Predictor:
         preds = []
         input_seq = [ self.word_to_idx[ word ] for word in input_seq ]
         for i in range( num_tokens ):
-            input_seq = torch.tensor( input_seq )
+            input_seq = torch.tensor( input_seq , device=self.device )
             predicted_token = self.predict_next_word( input_seq[ i : ] )
             preds.append( predicted_token )
             input_seq = input_seq.tolist()

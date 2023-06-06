@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Install Kaggle CLI
-pip3 install -q kaggle kaggle-cli
+pip3 install -q kaggle
 
 # Move Kaggle API credentials
 mkdir -p ~/.kaggle
@@ -13,11 +13,16 @@ ls ~/.kaggle
 kaggle datasets download -d michaelarman/poemsdataset
 
 # Unzip the dataset and copy the text files
-unzip -q poemsdataset.zip
 mkdir dataset
-cp -r forms/carol/*.txt dataset/
+unzip -q -j poemsdataset.zip "forms/carol/*" -d "dataset/"
+
+# Checkout the GitHub repo and move scripts to current directory
+git clone --depth=1 https://github.com/shubham0204/Poem_Maker_Transformer
+mv Poem_Maker_Transformer/* .
+
+# Download dependencies
+pip3 install munch wandb toml fire
 
 # Clean other directories/files
 rm poemsdataset.zip
-rm -r topics
-rm -r forms
+rm -r Poem_Maker_Transformer
