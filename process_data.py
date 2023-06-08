@@ -33,41 +33,45 @@ def make_sequences( sequence , input_length ):
         sequences.append( [sequence[i: i + input_length] , sequence[i + input_length]] )
     return sequences
 
-def process_data():
-    data_dir = data_config.data_path
-    output_dir = data_config.data_tensors_path
-    txt_files = os.listdir( data_dir )
 
-    if not os.path.exists( output_dir ):
-        os.mkdir( output_dir )
+data_dir = data_config.data_path
+output_dir = data_config.data_tensors_path
+txt_files = os.listdir( data_dir )
 
-    vocab = []
-    tokenized_sentences = []
-    for file in txt_files:
-        with open( os.path.join( data_dir , file ) , "r" , encoding="utf-8" ) as file_buffer:
-            tokens = get_tokens( file_buffer.read() )
-            vocab += tokens
-            tokenized_sentences.append( tokens )
-    vocab = list( set( vocab ) )
-    
-    index_to_word = dict( zip( range( len(vocab ) ) , vocab ) )
-    word_to_index = dict( zip( vocab , range( len(vocab) ) ) )
-    save_dict_as_pickle( index_to_word , os.path.join( output_dir , "idx_to_word.pkl" ) )
-    save_dict_as_pickle( word_to_index , os.path.join( output_dir , "word_to_idx.pkl" ) )
-    config.data.vocab_size = len( index_to_word )
-    save_global_config( config )
+if not os.path.exists( output_dir ):
+    os.mkdir( output_dir )
 
-    idx_tokenized_sentences = [ [ word_to_index[ word ] for word in sentence ] for sentence in tokenized_sentences ]
-    n_gram_sequences = []
-    for i in range( len(idx_tokenized_sentences) ):
-        n_gram_sequences += make_sequences(idx_tokenized_sentences[i], input_length=10)
+vocab = []
+tokenized_sentences = []
+for file in txt_files:
+    with open( os.path.join( data_dir , file ) , "r" , encoding="utf-8" ) as file_buffer:
+        tokens = get_tokens( file_buffer.read() )
+        vocab += tokens
+        tokenized_sentences.append( tokens )
+print( f"{len(tokenized_sentences)} sentences read." )
+vocab = list( set( vocab ) )
 
-    inputs = torch.tensor( [ sequence[0] for sequence in n_gram_sequences ] )
-    outputs = torch.tensor( [ sequence[1] for sequence in n_gram_sequences ] )
-    outputs = torch.unsqueeze( outputs , 1 )
-    torch.save( inputs , os.path.join( output_dir , "inputs.pt" ) )
-    torch.save( outputs , os.path.join( output_dir , "outputs.pt" ) )
+index_to_word = dict( zip( range( len(vocab ) ) , vocab ) )
+word_to_index = dict( zip( vocab , range( len(vocab) ) ) )
+save_dict_as_pickle( index_to_word , os.path.join( output_dir , "idx_to_word.pkl" ) )
+save_dict_as_pickle( word_to_index , os.path.join( output_dir , "word_to_idx.pkl" ) )
+config.data.vocab_size = len( index_to_word )
+print( f"{config.data.vocab_size} words in vocabulary" )
+save_global_config( config )
 
+idx_tokenized_sentences = [ [ word_to_index[ word ] for word in sentence ] for sentence in tokenized_sentences ]
+n_gram_sequences = []
+for i in range( len(idx_tokenized_sentences) ):
+    n_gram_sequences += make_sequences(idx_tokenized_sentences[i], input_length=data_config.seq_length)
+print( f"{len(n_gram_sequences)} sequences produced" )
 
-if __name__ == "__main__":
-    fire.Fire( process_data )
+split = data_config.test_split
+test_size = int( split * len(n_gram_sequences) )
+train_size = len( n_gram_sequences ) - test_size
+print( f"Number of training samples are {train_size} and validation samples are {test_size}" )
+
+inputs = torch.tensor( [ sequence[0] for sequence in n_gram_sequences ] )
+outputs = torch.tensor( [ sequence[1] for sequence in n_gram_sequences ] )
+outputs = torch.unsqueeze( outputs , 1 )
+torch.save( inputs , os.path.join( output_dir , "inputs.pt" ) )
+torch.save( outputs , os.path.join( output_dir , "outputs.pt" ) )

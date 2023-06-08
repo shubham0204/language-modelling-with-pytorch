@@ -2,6 +2,8 @@ from torch import nn
 import numpy as np
 import torch
 
+device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
+
 class DotProductAttention( nn.Module ):
 
     def __init__(self, embedding_dim, head_dim):
@@ -86,8 +88,7 @@ class PositionalEncoding( nn.Module ):
         self.positional_encoding = nn.Embedding( seq_length , embedding_dim )
 
     def forward( self , inputs ):
-        # TODO: Change here to dynamically choose device
-        return inputs + self.positional_encoding( torch.arange( self.seq_length , device="cuda" ) )
+        return inputs + self.positional_encoding( torch.arange( self.seq_length , device=device ) )
 
 class Transformer( nn.Module ):
 

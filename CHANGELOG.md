@@ -1,5 +1,9 @@
-`layers.py`: Added `device` to `PositionalEmbedding` module
+`layers.py`: Added CUDA `device`
 
-`predict.py`: Added CUDA support for inference
+`process_data`: Removed `Fire` dependency. Added print statements 
+for showing no. of samples in train/test datasets
 
-`setup_env.sh`: Downloads dependencies from PyPI, checkout GitHub repo
+`setup_env.sh`: Unzips `forms/sonnet` and `forms/epic` from the dataset 
+to increase training samples
+
+`train.py`: Added `tqdm` progressbar for training and testing loops

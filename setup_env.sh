@@ -15,9 +15,10 @@ kaggle datasets download -d michaelarman/poemsdataset
 # Unzip the dataset and copy the text files
 mkdir dataset
 unzip -q -j poemsdataset.zip "forms/carol/*" -d "dataset/"
+unzip -q -j poemsdataset.zip "forms/epic/*" -d "dataset/"
+unzip -q -j poemsdataset.zip "forms/sonnet/*" -d "dataset/"
 
-# Checkout the GitHub repo and move scripts to current directory
-git clone --depth=1 https://github.com/shubham0204/Poem_Maker_Transformer
+# Move scripts to current directory
 mv Poem_Maker_Transformer/* .
 
 # Download dependencies
