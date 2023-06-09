@@ -12,10 +12,13 @@ class DotProductAttention( nn.Module ):
         self.keys = nn.Linear(embedding_dim, head_dim)
         self.queries = nn.Linear(embedding_dim, head_dim)
         self.values = nn.Linear(embedding_dim, head_dim)
+        self.dropout = nn.Dropout( 0.2 )
         self.softmax = nn.Softmax( dim=-1 )
+        self.register_buffer( "tril" , torch.tril( torch.ones( head_dim , head_dim ) ) )
 
     def forward( self , inputs ):
         # inputs : ( B , seq_length , embedding_dim )
+        T = inputs.shape[1]
 
         K = self.keys(inputs)      # keys    : ( B , seq_length , head_dim )
         Q = self.queries( inputs ) # queries : ( B , seq_length , head_dim )
@@ -23,7 +26,10 @@ class DotProductAttention( nn.Module ):
 
         # SA : ( B , seq_length , seq_length )
         # Attention weights
-        SA = self.softmax(torch.matmul( Q , K.transpose( -2 , -1 ) ) * self.head_dims ** (-0.5))
+        SA = torch.matmul( Q , K.transpose( -2 , -1 ) ) * self.head_dims ** (-0.5)
+        SA = SA.masked_fill( self.tril[ :T , :T ] == 0 , float( '-inf' ) )
+        SA = self.softmax( SA )
+        SA = self.dropout( SA )
 
         return torch.matmul( SA , V ) # Output: ( B , seq_length , head_dim )
 
@@ -45,7 +51,7 @@ class MultiHeadAttention( nn.Module ):
 
 class FeedForward( nn.Module ):
 
-    def __init__(self, embedding_dim, dropout_rate = 0.5):
+    def __init__(self, embedding_dim, dropout_rate = 0.2):
         super( FeedForward , self ).__init__()
         self.net = nn.Sequential(
             nn.Linear(embedding_dim, 4 * embedding_dim) ,
@@ -99,6 +105,15 @@ class Transformer( nn.Module ):
         self.blocks = nn.Sequential( *[ Block( embedding_dim , num_heads_in_block ) for _ in range( num_blocks ) ] )
         self.layer_norm = nn.LayerNorm( embedding_dim )
         self.model_head = nn.Linear( embedding_dim , vocab_size )
+        self.apply( self._init_weight )
+
+    def _init_weight( self , module ):
+        if isinstance( module , nn.Linear ):
+            torch.nn.init.normal_( module.weight , 0.0 , 0.02 )
+            if module.bias is not None:
+                torch.nn.init.zeros_( module.bias )
+        elif isinstance( module , nn.Embedding ):
+            torch.nn.init.normal_( module.weight , 0.02 )
 
     def forward( self , inputs ):
         # inputs : ( B , seq_length )

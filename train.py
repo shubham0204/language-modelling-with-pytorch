@@ -10,12 +10,14 @@ import fire
 import os
 import datetime
 
-wandb.login()
 config = load_global_config()
 data_config = config.data
 train_config = config.train
 model_config = config.model
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
+
+if train_config.wandb_logging_enabled:
+    wandb.login()
 
 def get_checkpoint_path():
     checkpoints_path = train_config.checkpoint_path
