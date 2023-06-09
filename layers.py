@@ -9,9 +9,9 @@ class DotProductAttention( nn.Module ):
     def __init__(self, embedding_dim, head_dim):
         super( DotProductAttention , self ).__init__()
         self.head_dims = head_dim
-        self.keys = nn.Linear(embedding_dim, head_dim)
-        self.queries = nn.Linear(embedding_dim, head_dim)
-        self.values = nn.Linear(embedding_dim, head_dim)
+        self.keys = nn.Linear(embedding_dim, head_dim, bias=False)
+        self.queries = nn.Linear(embedding_dim, head_dim, bias=False)
+        self.values = nn.Linear(embedding_dim, head_dim, bias=False)
         self.dropout = nn.Dropout( 0.2 )
         self.softmax = nn.Softmax( dim=-1 )
         self.register_buffer( "tril" , torch.tril( torch.ones( head_dim , head_dim ) ) )
@@ -113,7 +113,7 @@ class Transformer( nn.Module ):
             if module.bias is not None:
                 torch.nn.init.zeros_( module.bias )
         elif isinstance( module , nn.Embedding ):
-            torch.nn.init.normal_( module.weight , 0.02 )
+            torch.nn.init.normal_( module.weight , 0.0 , 0.02 )
 
     def forward( self , inputs ):
         # inputs : ( B , seq_length )

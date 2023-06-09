@@ -1,3 +1,6 @@
-`layers.py`: Added mask for self attention module
+`layers.py`: Removed bias from `Linear` used in keys, queries and values
+Fixed `mean` in `torch.nn.init.normal_` for biases
 
-`train.py`: W&B login is executed only when `train_config.wandb_logging_enabled`
+`process_data.py`: Added `__name__ == "__main__"`
+
+`train.py`: Added `AdamW` with learning rate from `train_config`

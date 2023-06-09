@@ -90,7 +90,7 @@ model = Transformer(
     num_heads_in_block=model_config.num_heads_in_block
 )
 model.to( device )
-optimizer = torch.optim.Adam( model.parameters() , lr=0.001 )
+optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rate )
 
 if train_config.wandb_logging_enabled:
     wandb.init(

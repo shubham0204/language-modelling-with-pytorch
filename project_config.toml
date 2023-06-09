@@ -1,7 +1,7 @@
 [data]
 vocab_size = 5589
 seq_length = 10
-test_split = 0.3
+test_split = 0.2
 data_path = "dataset/"
 data_tensors_path = "data_tensors/"
 
@@ -13,7 +13,7 @@ num_heads_in_block = 3
 [train]
 num_epochs = 10
 batch_size = 32
-learning_rate = 0.001
+learning_rate = 0.0003
 checkpoint_path = "auto"
 wandb_logging_enabled = false
 wandb_project_name = "Poem Maker Transformer"
