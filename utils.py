@@ -4,19 +4,21 @@ import torch
 
 class Predictor:
 
-    def __init__( self , model , idx_to_word , word_to_idx , device ):
+    def __init__( self , model , idx_to_word , word_to_idx , device , temperature ):
         self.model = model
         self.idx_to_word = idx_to_word
         self.word_to_idx = word_to_idx
         self.device = device
+        self.temperature = temperature
         self.model.to( self.device )
 
     @torch.no_grad()
     def predict_next_word(self, input_seq):
         outputs = self.model( torch.unsqueeze( input_seq , dim=0 ) )
         outputs = outputs[ 0 , -1 , : ]
-        max_index = torch.argmax( torch.nn.functional.softmax( outputs , dim=0 ) )
-        return self.idx_to_word[ max_index.item() ]
+        outputs = torch.nn.functional.softmax( outputs , dim=-1 )
+        pred_word_index = torch.multinomial( outputs , num_samples=1 )
+        return self.idx_to_word[ pred_word_index.item() ]
 
     def predict_tokens( self , input_seq  , num_tokens ):
         preds = []

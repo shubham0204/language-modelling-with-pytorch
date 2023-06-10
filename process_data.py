@@ -1,6 +1,6 @@
 from utils import save_dict_as_pickle
 from config import load_global_config , save_global_config
-import fire
+import random
 import torch
 import os
 import re
@@ -69,7 +69,8 @@ if __name__ == "__main__":
     test_size = int( split * len(n_gram_sequences) )
     train_size = len( n_gram_sequences ) - test_size
     print( f"Number of training samples are {train_size} and validation samples are {test_size}" )
-    
+
+    random.shuffle( n_gram_sequences )
     inputs = torch.tensor( [ sequence[0] for sequence in n_gram_sequences ] )
     outputs = torch.tensor( [ sequence[1] for sequence in n_gram_sequences ] )
     outputs = torch.unsqueeze( outputs , 1 )

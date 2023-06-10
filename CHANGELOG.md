@@ -1,6 +1,8 @@
-`loss.py`: Added `accuracy` function to calculate categorical accuracy.
+`loss.py`: Added `torch.nn.functional.log_softmax`
 
-`process_data.py`: Modified `make_sequences` method to produce 
+`process_data.py`: `n_gram_sequences` are now shuffled before saving to file.
 
-`train.py`: Moved accuracy to `loss.py`. Loss is now calculated for
-all time-steps across a sequence
+`utils.py`: Added `temperature` parameter to `Predictor`. Also, it now 
+samples words from a multinomial distribution derived from softmax-ed predictions.
+
+`predict.py`: Added `temperature` parameter.
