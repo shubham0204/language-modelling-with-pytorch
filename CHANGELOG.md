@@ -1,6 +1,6 @@
-`layers.py`: Removed bias from `Linear` used in keys, queries and values
-Fixed `mean` in `torch.nn.init.normal_` for biases
+`loss.py`: Added `accuracy` function to calculate categorical accuracy.
 
-`process_data.py`: Added `__name__ == "__main__"`
+`process_data.py`: Modified `make_sequences` method to produce 
 
-`train.py`: Added `AdamW` with learning rate from `train_config`
+`train.py`: Moved accuracy to `loss.py`. Loss is now calculated for
+all time-steps across a sequence

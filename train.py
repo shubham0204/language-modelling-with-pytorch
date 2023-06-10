@@ -1,6 +1,6 @@
 from layers import Transformer
 from config import load_global_config
-from loss import sparse_crossentropy_with_logits
+from loss import sparse_crossentropy_with_logits , accuracy
 from tqdm import tqdm
 from torch.utils.data import TensorDataset , DataLoader , random_split
 from torch import nn
@@ -44,12 +44,10 @@ def train_epoch( model , train_ds_loader , optimizer ):
         inputs , outputs = inputs.to( device ) , outputs.to( device )
         optimizer.zero_grad()
         preds = model( inputs )
-        preds = preds[ : , -1 , : ]
         loss = sparse_crossentropy_with_logits( preds , outputs )
         loss.backward()
         optimizer.step()
-        preds = torch.argmax( torch.nn.functional.softmax( preds , dim=1 ) , dim=1 )
-        acc = torch.mean( torch.eq( preds , outputs[ : , -1 ] ).float() )
+        acc = accuracy( preds , outputs )
         avg_loss += loss.cpu().item()
         avg_acc += acc.cpu().item()
     avg_loss /= len( train_ds_loader )
@@ -63,10 +61,8 @@ def test_epoch( model , test_ds_loader ):
     for batch_idx , ( inputs , outputs ) in enumerate( tqdm( test_ds_loader , desc="Testing " ) ):
         inputs, outputs = inputs.to(device), outputs.to(device)
         preds = model( inputs )
-        preds = preds[ : , -1 , : ]
         loss = sparse_crossentropy_with_logits( preds , outputs )
-        preds = torch.argmax( torch.nn.functional.softmax( preds , dim=1 ) , dim=1 )
-        acc = torch.mean( torch.eq( preds , outputs[ : , -1 ] ).float() )
+        acc = accuracy( preds , outputs )
         avg_loss += loss.cpu().item()
         avg_acc += acc.cpu().item()
     avg_loss /= len( test_ds_loader )

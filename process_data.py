@@ -30,7 +30,7 @@ def pad_sequence( sequence , max_length ):
 def make_sequences( sequence , input_length ):
     sequences = []
     for i in range( len( sequence ) - input_length - 1 ):
-        sequences.append( [sequence[i: i + input_length] , sequence[i + input_length]] )
+        sequences.append( [sequence[i: i + input_length] , sequence[i + 1: i + input_length + 1] ] )
     return sequences
 
 if __name__ == "__main__":
