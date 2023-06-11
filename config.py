@@ -1,5 +1,6 @@
-import toml
 import munch
+import toml
+
 
 def load_global_config( filepath : str = "project_config.toml" ):
     return munch.munchify( toml.load( filepath ) )

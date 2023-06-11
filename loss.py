@@ -1,7 +1,10 @@
 import torch
 
 def sparse_crossentropy_with_logits(logits, targets):
-    log_softmax_preds = -torch.nn.functional.log_softmax( logits , targets )
+    batch_size , seq_length , vocab_size = logits.shape
+    targets = targets.view(batch_size * seq_length)
+    logits = logits.view(batch_size * seq_length, vocab_size)
+    log_softmax_preds = -torch.nn.functional.log_softmax( logits , dim=-1 )
     return torch.take( log_softmax_preds , targets ).mean()
 
 def accuracy( preds , targets ):

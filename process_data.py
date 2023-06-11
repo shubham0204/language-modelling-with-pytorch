@@ -1,9 +1,11 @@
-from utils import save_dict_as_pickle
-from config import load_global_config , save_global_config
-import random
-import torch
 import os
+import random
 import re
+
+import torch
+
+from config import load_global_config, save_global_config
+from utils import save_dict_as_pickle
 
 config = load_global_config()
 data_config = config.data

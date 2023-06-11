@@ -1,4 +1,5 @@
 import pickle
+
 import torch
 
 
@@ -16,7 +17,7 @@ class Predictor:
     def predict_next_word(self, input_seq):
         outputs = self.model( torch.unsqueeze( input_seq , dim=0 ) )
         outputs = outputs[ 0 , -1 , : ]
-        outputs = torch.nn.functional.softmax( outputs , dim=-1 )
+        outputs = torch.nn.functional.softmax( outputs / self.temperature , dim=-1 )
         pred_word_index = torch.multinomial( outputs , num_samples=1 )
         return self.idx_to_word[ pred_word_index.item() ]
 

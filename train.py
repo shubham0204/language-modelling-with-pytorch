@@ -1,14 +1,12 @@
-from layers import Transformer
-from config import load_global_config
-from loss import sparse_crossentropy_with_logits , accuracy
-from tqdm import tqdm
-from torch.utils.data import TensorDataset , DataLoader , random_split
-from torch import nn
+import datetime
+import os
 import torch
 import wandb
-import fire
-import os
-import datetime
+from torch.utils.data import TensorDataset, DataLoader, random_split
+from tqdm import tqdm
+from config import load_global_config
+from layers import Transformer
+from loss import sparse_crossentropy_with_logits, accuracy
 
 config = load_global_config()
 data_config = config.data
