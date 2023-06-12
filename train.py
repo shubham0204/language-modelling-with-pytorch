@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader, random_split
 from tqdm import tqdm
 from config import load_global_config
 from layers import Transformer
-from loss import sparse_crossentropy_with_logits, accuracy
+from loss import sparse_crossentropy_with_logits, perplexity
 
 config = load_global_config()
 data_config = config.data
@@ -16,6 +16,32 @@ device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
 
 if train_config.wandb_logging_enabled:
     wandb.login()
+    
+class LearningRateScheduler:
+    
+    def __init__( self , optimizer , lr_multiplier , embedding_dim , num_warmup_steps ):
+        self.optimizer = optimizer
+        self.lr_multiplier = lr_multiplier
+        self.embedding_dim = embedding_dim
+        self.num_warmup_steps = num_warmup_steps
+        self.num_steps = 0
+
+    def get_current_lr( self ):
+        return self.lr_multiplier * ( self.embedding_dim ** -0.5) * min( self.num_steps ** (-0.5), self.num_steps * self.num_warmup_steps ** (-1.5))
+
+    def step( self ):
+        self.update_lr()
+        self.optimizer.step()
+
+    def zero_grad(self):
+        self.optimizer.zero_grad()
+
+    def update_lr( self ):
+        self.num_steps += 1
+        new_lr = self.get_current_lr()
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = new_lr
+
 
 def get_checkpoint_path():
     checkpoints_path = train_config.checkpoint_path
@@ -37,7 +63,7 @@ def make_data_loaders( data_tensors_path : str , test_split : float = 0.3 , batc
 def train_epoch( model , train_ds_loader , optimizer ):
     model.train()
     avg_loss = 0.0
-    avg_acc = 0.0
+    avg_ppl = 0.0
     for batch_idx , ( inputs , outputs ) in enumerate( tqdm( train_ds_loader , desc="Training " ) ):
         inputs , outputs = inputs.to( device ) , outputs.to( device )
         optimizer.zero_grad()
@@ -45,27 +71,27 @@ def train_epoch( model , train_ds_loader , optimizer ):
         loss = sparse_crossentropy_with_logits( preds , outputs )
         loss.backward()
         optimizer.step()
-        acc = accuracy( preds , outputs )
+        ppl = perplexity( loss )
         avg_loss += loss.cpu().item()
-        avg_acc += acc.cpu().item()
+        avg_ppl += ppl.cpu().item()
     avg_loss /= len( train_ds_loader )
-    avg_acc /= len( train_ds_loader )
-    return avg_loss , avg_acc
+    avg_ppl /= len( train_ds_loader )
+    return avg_loss , avg_ppl
 
 def test_epoch( model , test_ds_loader ):
     model.eval()
     avg_loss = 0.0
-    avg_acc = 0.0
+    avg_ppl = 0.0
     for batch_idx , ( inputs , outputs ) in enumerate( tqdm( test_ds_loader , desc="Testing " ) ):
         inputs, outputs = inputs.to(device), outputs.to(device)
         preds = model( inputs )
         loss = sparse_crossentropy_with_logits( preds , outputs )
-        acc = accuracy( preds , outputs )
+        ppl = perplexity( loss )
         avg_loss += loss.cpu().item()
-        avg_acc += acc.cpu().item()
+        avg_ppl += ppl.cpu().item()
     avg_loss /= len( test_ds_loader )
-    avg_acc /= len( test_ds_loader )
-    return avg_loss , avg_acc
+    avg_ppl /= len( test_ds_loader )
+    return avg_loss , avg_ppl
 
 
 
@@ -84,7 +110,11 @@ model = Transformer(
     num_heads_in_block=model_config.num_heads_in_block
 )
 model.to( device )
-optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rate )
+optimizer = torch.optim.Adam( model.parameters() , betas = (0.9, 0.98), eps=1.0e-9 )
+optimizer = LearningRateScheduler( optimizer ,
+                                   train_config.lr_multiplier ,
+                                   model_config.embedding_dim ,
+                                   train_config.num_warmup_steps )
 
 if train_config.wandb_logging_enabled:
     wandb.init(
@@ -94,19 +124,19 @@ if train_config.wandb_logging_enabled:
 
 for e in range( train_config.num_epochs ):
     print( f"--------- EPOCH {e + 1} -----------" )
-    train_loss , train_acc = train_epoch( model , train_ds_loader , optimizer )
-    val_loss , val_acc = test_epoch( model , test_ds_loader )
+    train_loss , train_ppl = train_epoch(model, train_ds_loader, optimizer)
+    val_loss , val_ppl = test_epoch(model, test_ds_loader)
     if train_config.wandb_logging_enabled:
         wandb.log( {
                 "loss" : train_loss ,
-                "acc" : train_acc ,
+                "perplexity" : train_ppl ,
                 "val_loss" : val_loss ,
-                "val_acc" : val_acc
+                "val_perplexity" : val_ppl
             } )
     torch.save(
         model ,
         os.path.join( ckpt_path , "model_{}.pt".format( e + 1 ) )
     )
-    print("{} loss={:.5f}, acc={:.5f} , val_loss={:.5f}, val_acc={:.5f}"
-          .format(e + 1 , train_loss , train_acc , val_loss , val_acc ) )
+    print("{} loss={:.5f}, perplexity={:.5f} , val_loss={:.5f}, val_perplexity={:.5f}"
+          .format(e + 1, train_loss, train_ppl, val_loss, val_ppl))
 

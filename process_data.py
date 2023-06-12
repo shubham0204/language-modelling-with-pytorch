@@ -9,19 +9,26 @@ from utils import save_dict_as_pickle
 
 config = load_global_config()
 data_config = config.data
+"""
+TODO:
+1. Use SGD
+2. Increase context length
+3. Change dataset
+4. Add free text generation in predict.py
+"""
+token_linebreak = "[SEP]"
+token_seq_start = "[START]"
+token_seq_end = "[END]"
 
 def filter_token( text_token : str ):
     return re.sub(r"\W+", "", text_token)
 
 def get_tokens( poem_text : str ):
-    lines = [line.lower() for line in poem_text.split("\n")]
-    lines = [line for line in lines if len(line.strip()) != 0]
-    tokens = []
-    for line in lines:
-        tokens += line.split()
+    poem_text = poem_text.lower()
+    poem_text = poem_text.replace( "\n" , " " + token_linebreak + " " )
+    tokens = poem_text.split()
     tokens = [token for token in tokens if len(token.strip()) != 0]
-    tokens = [filter_token(token) for token in tokens]
-    return tokens
+    return [ token_seq_start ] + tokens + [ token_seq_end ]
 
 def pad_sequence( sequence , max_length ):
     if len( sequence ) < max_length:

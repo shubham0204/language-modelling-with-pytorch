@@ -32,6 +32,17 @@ class Predictor:
             input_seq.append( self.word_to_idx[ predicted_token ] )
         return preds
 
+    def generate_text( self , num_tokens , seq_length ):
+        preds = []
+        input_seq = [ 0 for _ in range( seq_length ) ]
+        for i in range(num_tokens):
+            input_seq = torch.tensor(input_seq, device=self.device)
+            predicted_token = self.predict_next_word(input_seq[i:])
+            preds.append(predicted_token)
+            input_seq = input_seq.tolist()
+            input_seq.append(self.word_to_idx[predicted_token])
+        return preds
+
 
 def save_dict_as_pickle( data : dict , filename : str ):
     with open( filename , "wb" ) as file:

@@ -1,19 +1,20 @@
 [data]
-vocab_size = 11911
-seq_length = 10
+vocab_size = 5191
+seq_length = 128
 test_split = 0.2
 data_path = "dataset/"
 data_tensors_path = "data_tensors/"
 
 [model]
 embedding_dim = 256
-num_blocks = 5
-num_heads_in_block = 3
+num_blocks = 2
+num_heads_in_block = 6
 
 [train]
-num_epochs = 10
-batch_size = 32
-learning_rate = 0.0003
+num_epochs = 50
+batch_size = 64
+lr_multiplier = 2.0
+num_warmup_steps = 4000
 checkpoint_path = "auto"
 wandb_logging_enabled = false
 wandb_project_name = "Poem Maker Transformer"

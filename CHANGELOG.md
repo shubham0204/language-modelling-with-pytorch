@@ -1,7 +1,9 @@
-`loss.py`: `logits` and `targets` are now reshaped before computing log-softmax
+`loss.py`: Added `perplexity` metric.
 
-`process_data.py`: `n_gram_sequences` are now shuffled before saving to file.
+`train.py`: Prints `perplexity` instead of accuracy now. Added `LearningRateScheduler`
 
-`utils.py`: Added `temperature` parameter in softmax computation 
+`process_data.py`: Added `[SEP]`, `[START]` and `[END]` tokens to sequences.
 
-`predict.py`: Added `temperature` parameter in softmax computation and `map_location` in `torch.load`
+`setup_env.sh`: It now unzips poems from 10 natural-like topics.
+
+`predict.py`: Added open-text generation with `num_tokens` argument.
