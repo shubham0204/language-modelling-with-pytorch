@@ -52,9 +52,9 @@ if __name__ == "__main__":
 
     vocab = []
     tokenized_sentences = []
-    for file in txt_files:
-        with open( os.path.join( data_dir , file ) , "r" , encoding="utf-8" ) as file_buffer:
-            tokens = get_tokens( file_buffer.read() )
+    with open( os.path.join( data_dir , "dataset_articles.txt" ) , "r" , encoding="utf-8" ) as text_file:
+        for line in text_file:
+            tokens = get_tokens( line )
             vocab += tokens
             tokenized_sentences.append( tokens )
     print( f"{len(tokenized_sentences)} sentences read." )

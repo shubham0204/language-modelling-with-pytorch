@@ -1,5 +1,5 @@
 [data]
-vocab_size = 5191
+vocab_size = 26657
 seq_length = 128
 test_split = 0.2
 data_path = "dataset/"
