@@ -38,7 +38,8 @@ def pad_sequence( sequence , max_length ):
 
 def make_sequences( sequence , input_length ):
     sequences = []
-    for i in range( len( sequence ) - input_length - 1 ):
+    for _ in range( 50 ):
+        i = random.randint( 0 , len( sequence ) - input_length - 2 )
         sequences.append( [sequence[i: i + input_length] , sequence[i + 1: i + input_length + 1] ] )
     return sequences
 
@@ -82,6 +83,5 @@ if __name__ == "__main__":
     random.shuffle( n_gram_sequences )
     inputs = torch.tensor( [ sequence[0] for sequence in n_gram_sequences ] )
     outputs = torch.tensor( [ sequence[1] for sequence in n_gram_sequences ] )
-    outputs = torch.unsqueeze( outputs , 1 )
     torch.save( inputs , os.path.join( output_dir , "inputs.pt" ) )
     torch.save( outputs , os.path.join( output_dir , "outputs.pt" ) )

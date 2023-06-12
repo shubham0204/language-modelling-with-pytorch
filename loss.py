@@ -1,8 +1,9 @@
 import torch
 
-def sparse_crossentropy_with_logits(logits, targets):
-    log_softmax_preds = -torch.nn.functional.log_softmax( logits , dim=-1 )
-    return torch.take( log_softmax_preds , targets ).mean()
+loss_func = torch.nn.CrossEntropyLoss()
+
+def cross_entropy_loss( logits, targets ):
+    return loss_func( logits , targets )
 
 def perplexity( cross_entropy_loss ):
     return torch.exp( cross_entropy_loss )
@@ -16,7 +17,7 @@ if __name__ == "__main__":
 
     labels = labels.view( batch_size * seq_length )
     logits = logits.view( batch_size * seq_length , vocab_size )
-    loss = sparse_crossentropy_with_logits(logits, labels)
+    loss = cross_entropy_loss(logits, labels)
     loss2 = torch.nn.functional.cross_entropy( logits , labels )
     print( loss , loss.shape )
     print( loss2 )

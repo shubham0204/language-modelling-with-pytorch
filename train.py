@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader, random_split
 from tqdm import tqdm
 from config import load_global_config
 from layers import Transformer
-from loss import sparse_crossentropy_with_logits, perplexity
+from loss import cross_entropy_loss, perplexity
 
 config = load_global_config()
 data_config = config.data
@@ -42,7 +42,6 @@ class LearningRateScheduler:
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = new_lr
 
-
 def get_checkpoint_path():
     checkpoints_path = train_config.checkpoint_path
     if train_config.checkpoint_path == "auto":
@@ -66,10 +65,14 @@ def train_epoch( model , train_ds_loader , optimizer ):
     avg_ppl = 0.0
     for batch_idx , ( inputs , outputs ) in enumerate( tqdm( train_ds_loader , desc="Training " ) ):
         inputs , outputs = inputs.to( device ) , outputs.to( device )
+        batch_size , seq_length = inputs.shape
         optimizer.zero_grad()
         preds = model( inputs )
-        loss = sparse_crossentropy_with_logits( preds , outputs )
+        preds = preds.view( batch_size * seq_length , data_config.vocab_size )
+        targets = outputs.view( batch_size * seq_length ,  )
+        loss = cross_entropy_loss(preds, targets)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_( model.parameters(), 0.5 )
         optimizer.step()
         ppl = perplexity( loss )
         avg_loss += loss.cpu().item()
@@ -84,16 +87,17 @@ def test_epoch( model , test_ds_loader ):
     avg_ppl = 0.0
     for batch_idx , ( inputs , outputs ) in enumerate( tqdm( test_ds_loader , desc="Testing " ) ):
         inputs, outputs = inputs.to(device), outputs.to(device)
+        batch_size, seq_length = inputs.shape
         preds = model( inputs )
-        loss = sparse_crossentropy_with_logits( preds , outputs )
+        preds = preds.view(batch_size * seq_length, data_config.vocab_size)
+        targets = outputs.view(batch_size * seq_length, )
+        loss = cross_entropy_loss(preds, targets)
         ppl = perplexity( loss )
         avg_loss += loss.cpu().item()
         avg_ppl += ppl.cpu().item()
     avg_loss /= len( test_ds_loader )
     avg_ppl /= len( test_ds_loader )
     return avg_loss , avg_ppl
-
-
 
 train_ds_loader , test_ds_loader = make_data_loaders(
     data_config.data_tensors_path ,
@@ -110,7 +114,7 @@ model = Transformer(
     num_heads_in_block=model_config.num_heads_in_block
 )
 model.to( device )
-optimizer = torch.optim.Adam( model.parameters() , betas = (0.9, 0.98), eps=1.0e-9 )
+optimizer = torch.optim.SGD( model.parameters() , lr=0.001 )
 optimizer = LearningRateScheduler( optimizer ,
                                    train_config.lr_multiplier ,
                                    model_config.embedding_dim ,
