@@ -24,6 +24,9 @@ class Predictor:
     def predict_tokens( self , input_seq  , num_tokens ):
         preds = []
         input_seq = [ self.word_to_idx[ word ] for word in input_seq ]
+        if len(input_seq) < 128:
+            diff = 128 - len(input_seq)
+            input_seq = [0 for _ in range(diff)] + input_seq
         for i in range( num_tokens ):
             input_seq = torch.tensor( input_seq , device=self.device )
             predicted_token = self.predict_next_word( input_seq[ i : ] )

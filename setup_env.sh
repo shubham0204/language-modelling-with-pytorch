@@ -7,5 +7,4 @@ mv Poem_Maker_Transformer/* .
 pip3 install munch wandb toml fire
 
 # Clean other directories/files
-rm poemsdataset.zip
 rm -r Poem_Maker_Transformer

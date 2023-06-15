@@ -1,6 +1,6 @@
 [data]
-vocab_size = 26657
-seq_length = 128
+vocab_size = 14900
+seq_length = 64
 test_split = 0.2
 data_path = "dataset/"
 data_tensors_path = "data_tensors/"
@@ -8,11 +8,13 @@ data_tensors_path = "data_tensors/"
 [model]
 embedding_dim = 256
 num_blocks = 2
-num_heads_in_block = 6
+num_heads_in_block = 4
 
 [train]
-num_epochs = 50
-batch_size = 64
+num_train_iter = 50
+num_test_iter = 10
+test_interval = 10
+batch_size = 128
 lr_multiplier = 2.0
 num_warmup_steps = 3500
 checkpoint_path = "auto"

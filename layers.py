@@ -34,7 +34,7 @@ class DotProductAttention( nn.Module ):
 
 class MultiHeadAttention( nn.Module ):
 
-    def __init__(self, embedding_dim, num_heads, head_dim, dropout=0.5):
+    def __init__(self, embedding_dim, num_heads, head_dim, dropout=0.2):
         super( MultiHeadAttention , self ).__init__()
         self.heads = nn.ModuleList([DotProductAttention(embedding_dim, head_dim) for _ in range(num_heads)])
         self.proj = nn.Linear(num_heads * head_dim, embedding_dim)
@@ -66,7 +66,8 @@ class Block( nn.Module ):
 
     def __init__(self, embedding_dim, num_heads):
         super( Block , self ).__init__()
-        self.attention = MultiHeadAttention( embedding_dim , num_heads, head_dim=embedding_dim )
+        head_dim = embedding_dim // num_heads
+        self.attention = MultiHeadAttention( embedding_dim , num_heads, head_dim )
         self.feed_forward = FeedForward(embedding_dim)
         self.layer_norm_1 = nn.LayerNorm(embedding_dim)
         self.layer_norm_2 = nn.LayerNorm(embedding_dim)

@@ -1,11 +1,14 @@
 import datetime
 import os
 import torch
+import pickle
 import wandb
+import random
 from torch.utils.data import TensorDataset, DataLoader, random_split
 from tqdm import tqdm
 from config import load_global_config
 from layers import Transformer
+from utils import load_dict_from_pickle
 from loss import cross_entropy_loss, perplexity
 
 config = load_global_config()
@@ -13,6 +16,8 @@ data_config = config.data
 train_config = config.train
 model_config = config.model
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
+mapping = load_dict_from_pickle("data_tensors/idx_to_word.pkl")
+torch.manual_seed( 1335 )
 
 if train_config.wandb_logging_enabled:
     wandb.login()
@@ -42,6 +47,14 @@ class LearningRateScheduler:
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = new_lr
 
+def log_metrics( train_loss , train_ppl , val_loss , val_ppl ):
+    wandb.log({
+        "loss": train_loss,
+        "perplexity": train_ppl,
+        "val_loss": val_loss,
+        "val_perplexity": val_ppl
+    })
+
 def get_checkpoint_path():
     checkpoints_path = train_config.checkpoint_path
     if train_config.checkpoint_path == "auto":
@@ -59,51 +72,66 @@ def make_data_loaders( data_tensors_path : str , test_split : float = 0.3 , batc
     test_ds_loader = DataLoader( test_ds , batch_size , shuffle=True , drop_last=True )
     return train_ds_loader , test_ds_loader
 
-def train_epoch( model , train_ds_loader , optimizer ):
+def get_batch_loader( data_tensors_path : str , batch_size , input_length ):
+    with open( os.path.join( data_tensors_path , "sequences.pkl" ) , "rb" ) as file:
+        indexed_sequences = pickle.load( file )
+    test_split_index = int( (1.0-data_config.test_split) * len( indexed_sequences ) )
+    train_indexed_sequences = indexed_sequences[ : test_split_index ]
+    test_indexed_sequences = indexed_sequences[ test_split_index : ]
+
+    def get_train_batch():
+        random_indices = torch.randint(0, len(train_indexed_sequences) - input_length - 2, size=(batch_size,))
+        inputs = torch.stack([
+            torch.tensor(train_indexed_sequences[i: i + input_length])
+            for i in random_indices
+        ])
+        outputs = torch.stack([
+            torch.tensor(train_indexed_sequences[i + 1: i + input_length + 1])
+            for i in random_indices
+        ])
+        return inputs , outputs
+
+    def get_test_batch():
+        random_indices = torch.randint( 0, len(test_indexed_sequences) - input_length - 2 , size=( batch_size , ))
+        inputs = torch.stack( [
+            torch.tensor( test_indexed_sequences[i: i + input_length] )
+            for i in random_indices ] )
+        outputs = torch.stack( [
+            torch.tensor( test_indexed_sequences[i + 1: i + input_length + 1] )
+            for i in random_indices
+        ] )
+        return inputs, outputs
+
+    return get_train_batch , get_test_batch
+
+def train_on_batch(model, batch_loader, optimizer):
     model.train()
-    avg_loss = 0.0
-    avg_ppl = 0.0
-    for batch_idx , ( inputs , outputs ) in enumerate( tqdm( train_ds_loader , desc="Training " ) ):
-        inputs , outputs = inputs.to( device ) , outputs.to( device )
-        batch_size , seq_length = inputs.shape
-        optimizer.zero_grad()
-        preds = model( inputs )
-        preds = preds.view( batch_size * seq_length , data_config.vocab_size )
-        targets = outputs.view( batch_size * seq_length ,  )
-        loss = cross_entropy_loss(preds, targets)
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_( model.parameters(), 0.5 )
-        optimizer.step()
-        ppl = perplexity( loss )
-        avg_loss += loss.cpu().item()
-        avg_ppl += ppl.cpu().item()
-    avg_loss /= len( train_ds_loader )
-    avg_ppl /= len( train_ds_loader )
-    return avg_loss , avg_ppl
+    inputs , outputs = batch_loader()
+    inputs , outputs = inputs.to( device ) , outputs.to( device )
+    batch_size , seq_length = inputs.shape
+    optimizer.zero_grad()
+    preds = model( inputs )
+    preds = preds.view( batch_size * seq_length , data_config.vocab_size )
+    targets = outputs.view( batch_size * seq_length ,  )
+    loss = cross_entropy_loss(preds, targets)
+    loss.backward()
+    torch.nn.utils.clip_grad_norm_( model.parameters(), 0.5 )
+    optimizer.step()
+    ppl = perplexity( loss )
+    return loss.cpu().item() , ppl.cpu().item()
 
-def test_epoch( model , test_ds_loader ):
+def test_on_batch(model, batch_loader):
     model.eval()
-    avg_loss = 0.0
-    avg_ppl = 0.0
-    for batch_idx , ( inputs , outputs ) in enumerate( tqdm( test_ds_loader , desc="Testing " ) ):
-        inputs, outputs = inputs.to(device), outputs.to(device)
-        batch_size, seq_length = inputs.shape
-        preds = model( inputs )
-        preds = preds.view(batch_size * seq_length, data_config.vocab_size)
-        targets = outputs.view(batch_size * seq_length, )
-        loss = cross_entropy_loss(preds, targets)
-        ppl = perplexity( loss )
-        avg_loss += loss.cpu().item()
-        avg_ppl += ppl.cpu().item()
-    avg_loss /= len( test_ds_loader )
-    avg_ppl /= len( test_ds_loader )
-    return avg_loss , avg_ppl
+    inputs , outputs = batch_loader()
+    inputs, outputs = inputs.to(device), outputs.to(device)
+    batch_size, seq_length = inputs.shape
+    preds = model( inputs )
+    preds = preds.view(batch_size * seq_length, data_config.vocab_size)
+    targets = outputs.view(batch_size * seq_length, )
+    loss = cross_entropy_loss(preds, targets)
+    ppl = perplexity( loss )
+    return loss.cpu().item() , ppl.cpu().item()
 
-train_ds_loader , test_ds_loader = make_data_loaders(
-    data_config.data_tensors_path ,
-    data_config.test_split ,
-    train_config.batch_size
-)
 ckpt_path = get_checkpoint_path()
 
 model = Transformer(
@@ -126,21 +154,35 @@ if train_config.wandb_logging_enabled:
         config=model_config.update( train_config )
     )
 
-for e in range( train_config.num_epochs ):
-    print( f"--------- EPOCH {e + 1} -----------" )
-    train_loss , train_ppl = train_epoch(model, train_ds_loader, optimizer)
-    val_loss , val_ppl = test_epoch(model, test_ds_loader)
+train_batch_dispatcher , test_batch_dispatcher = get_batch_loader(
+    data_config.data_tensors_path ,
+    train_config.batch_size ,
+    data_config.seq_length
+)
+
+for iter in range( train_config.num_train_iter ):
+
+    train_loss , train_ppl = train_on_batch(model, train_batch_dispatcher, optimizer)
+
     if train_config.wandb_logging_enabled:
-        wandb.log( {
-                "loss" : train_loss ,
-                "perplexity" : train_ppl ,
-                "val_loss" : val_loss ,
-                "val_perplexity" : val_ppl
-            } )
-    torch.save(
-        model ,
-        os.path.join( ckpt_path , "model_{}.pt".format( e + 1 ) )
-    )
-    print("{} loss={:.5f}, perplexity={:.5f} , val_loss={:.5f}, val_perplexity={:.5f}"
-          .format(e + 1, train_loss, train_ppl, val_loss, val_ppl))
+        pass
+
+
+
+    if iter % train_config.test_interval == 0 or iter == train_config.num_train_iter - 1:
+        avg_val_loss = 0.0
+        avg_val_ppl = 0.0
+        for val_iter in range( train_config.num_test_iter ):
+            val_loss, val_ppl = test_on_batch(model, test_batch_dispatcher)
+            avg_val_loss += val_loss
+            avg_val_ppl += val_ppl
+        avg_val_loss /= train_config.num_test_iter
+        avg_val_ppl /= train_config.num_test_iter
+        print("{} loss={:.5f}, perplexity={:.5f} , val_loss={:.5f}, val_perplexity={:.5f}"
+              .format(iter + 1, train_loss, train_ppl, avg_val_loss, avg_val_ppl))
+        torch.save(
+            model ,
+            os.path.join( ckpt_path , "model_{}.pt".format( iter + 1 ) )
+        )
+
 
