@@ -1,9 +1,9 @@
+import itertools
 import os
+import pickle
 import random
 import re
-import itertools
-import torch
-import pickle
+
 from config import load_global_config, save_global_config
 from utils import save_dict_as_pickle
 
@@ -73,21 +73,3 @@ if __name__ == "__main__":
 
     with open( os.path.join( data_config.data_tensors_path , "sequences.pkl" ) , "wb" ) as file:
         pickle.dump( idx_tokenized_ds , file )
-
-    """
-    n_gram_sequences = []
-    for i in range(len(idx_tokenized_ds)):
-        n_gram_sequences += make_sequences(idx_tokenized_ds[i], input_length=data_config.seq_length)
-    print( f"{len(n_gram_sequences)} sequences produced" )
-
-    split = data_config.test_split
-    test_size = int( split * len(n_gram_sequences) )
-    train_size = len( n_gram_sequences ) - test_size
-    print( f"Number of training samples are {train_size} and validation samples are {test_size}" )
-
-    inputs = torch.tensor( [ sequence[0] for sequence in n_gram_sequences ] )
-    outputs = torch.tensor( [ sequence[1] for sequence in n_gram_sequences ] )
-    torch.save( inputs , os.path.join( output_dir , "inputs.pt" ) )
-    torch.save( outputs , os.path.join( output_dir , "outputs.pt" ) )
-    """
-

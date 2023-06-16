@@ -5,13 +5,13 @@ device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
 
 class DotProductAttention( nn.Module ):
 
-    def __init__(self, embedding_dim, head_dim):
+    def __init__(self, embedding_dim, head_dim, dropout):
         super( DotProductAttention , self ).__init__()
         self.head_dims = head_dim
         self.keys = nn.Linear(embedding_dim, head_dim, bias=False)
         self.queries = nn.Linear(embedding_dim, head_dim, bias=False)
         self.values = nn.Linear(embedding_dim, head_dim, bias=False)
-        self.dropout = nn.Dropout( 0.2 )
+        self.dropout = nn.Dropout( dropout )
         self.softmax = nn.Softmax( dim=-1 )
         self.register_buffer( "tril" , torch.tril( torch.ones( head_dim , head_dim ) ) )
 
@@ -34,9 +34,9 @@ class DotProductAttention( nn.Module ):
 
 class MultiHeadAttention( nn.Module ):
 
-    def __init__(self, embedding_dim, num_heads, head_dim, dropout=0.2):
+    def __init__(self, embedding_dim, num_heads, head_dim, dropout ):
         super( MultiHeadAttention , self ).__init__()
-        self.heads = nn.ModuleList([DotProductAttention(embedding_dim, head_dim) for _ in range(num_heads)])
+        self.heads = nn.ModuleList([DotProductAttention(embedding_dim, head_dim, dropout) for _ in range(num_heads)])
         self.proj = nn.Linear(num_heads * head_dim, embedding_dim)
         self.dropout = nn.Dropout( dropout )
 
@@ -64,10 +64,10 @@ class FeedForward( nn.Module ):
 
 class Block( nn.Module ):
 
-    def __init__(self, embedding_dim, num_heads):
+    def __init__(self, embedding_dim, num_heads , dropout ):
         super( Block , self ).__init__()
         head_dim = embedding_dim // num_heads
-        self.attention = MultiHeadAttention( embedding_dim , num_heads, head_dim )
+        self.attention = MultiHeadAttention( embedding_dim , num_heads, head_dim , dropout )
         self.feed_forward = FeedForward(embedding_dim)
         self.layer_norm_1 = nn.LayerNorm(embedding_dim)
         self.layer_norm_2 = nn.LayerNorm(embedding_dim)
@@ -88,21 +88,29 @@ class TokenEmbedding( nn.Module ):
 
 class PositionalEncoding( nn.Module ):
 
-    def __init__( self , seq_length , embedding_dim ):
+    def __init__( self , seq_length , embedding_dim , dropout ):
         super( PositionalEncoding , self ).__init__()
-        self.seq_length = seq_length
-        self.positional_encoding = nn.Embedding( seq_length , embedding_dim )
+        self.dropout = nn.Dropout( dropout )
+        self.embedding_dim = embedding_dim
+        position = torch.arange( seq_length ).unsqueeze( 1 )
+        div_term = torch.pow( 10000.0 , torch.arange( 0 , embedding_dim , 2 ) / embedding_dim )
+        positional_embeddings = torch.zeros( ( seq_length , embedding_dim ) )
+        positional_embeddings[ : , 0::2 ] = torch.sin( position / div_term )
+        positional_embeddings[ : , 1::2 ] = torch.cos( position / div_term )
+        self.register_buffer( "pe" , positional_embeddings )
 
     def forward( self , inputs ):
-        return inputs + self.positional_encoding( torch.arange( self.seq_length , device=device ) )
+        x = inputs * torch.sqrt( self.embedding_dim )
+        x = x + self.pe
+        return self.dropout( x )
 
 class Transformer( nn.Module ):
 
-    def __init__( self , vocab_size , embedding_dim , seq_length , num_blocks , num_heads_in_block ):
+    def __init__( self , vocab_size , embedding_dim , seq_length , num_blocks , num_heads_in_block , dropout ):
         super( Transformer , self ).__init__()
         self.token_embedding = TokenEmbedding( vocab_size , embedding_dim )
-        self.pos_encoding = PositionalEncoding( seq_length , embedding_dim )
-        self.blocks = nn.Sequential( *[ Block( embedding_dim , num_heads_in_block ) for _ in range( num_blocks ) ] )
+        self.pos_encoding = PositionalEncoding( seq_length , embedding_dim , dropout )
+        self.blocks = nn.Sequential( *[ Block( embedding_dim , num_heads_in_block , dropout ) for _ in range( num_blocks ) ] )
         self.layer_norm = nn.LayerNorm( embedding_dim )
         self.model_head = nn.Linear( embedding_dim , vocab_size )
         self.apply( self._init_weight )
@@ -132,7 +140,11 @@ if __name__ == "__main__":
     num_heads = 14
     vocab_size = 10000
 
-    model = Transformer( vocab_size , embedding_dim , seq_length , num_blocks=5 , num_heads_in_block=num_heads )
+    model = Transformer( vocab_size , embedding_dim , seq_length , num_blocks=5 , num_heads_in_block=num_heads , dropout=0.1 )
     inputs = torch.randint( low=1 , high=vocab_size , size=( B , seq_length ) )
     outputs = model( inputs )
     print( outputs.shape )
+
+    enc = PositionalEncoding( seq_length , embedding_dim , 0.1 )
+    emb = torch.randn( ( B , seq_length , embedding_dim ) )
+    print( enc( emb ).shape )

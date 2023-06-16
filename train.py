@@ -1,14 +1,12 @@
 import datetime
 import os
-import torch
 import pickle
+
+import torch
 import wandb
-import random
-from torch.utils.data import TensorDataset, DataLoader, random_split
-from tqdm import tqdm
+
 from config import load_global_config
 from layers import Transformer
-from utils import load_dict_from_pickle
 from loss import cross_entropy_loss, perplexity
 
 config = load_global_config()
@@ -16,36 +14,11 @@ data_config = config.data
 train_config = config.train
 model_config = config.model
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
-mapping = load_dict_from_pickle("data_tensors/idx_to_word.pkl")
+
 torch.manual_seed( 1335 )
 
 if train_config.wandb_logging_enabled:
     wandb.login()
-    
-class LearningRateScheduler:
-    
-    def __init__( self , optimizer , lr_multiplier , embedding_dim , num_warmup_steps ):
-        self.optimizer = optimizer
-        self.lr_multiplier = lr_multiplier
-        self.embedding_dim = embedding_dim
-        self.num_warmup_steps = num_warmup_steps
-        self.num_steps = 0
-
-    def get_current_lr( self ):
-        return self.lr_multiplier * ( self.embedding_dim ** -0.5) * min( self.num_steps ** (-0.5), self.num_steps * self.num_warmup_steps ** (-1.5))
-
-    def step( self ):
-        self.update_lr()
-        self.optimizer.step()
-
-    def zero_grad(self):
-        self.optimizer.zero_grad()
-
-    def update_lr( self ):
-        self.num_steps += 1
-        new_lr = self.get_current_lr()
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = new_lr
 
 def log_metrics( train_loss , train_ppl , val_loss , val_ppl ):
     wandb.log({
@@ -63,16 +36,7 @@ def get_checkpoint_path():
         os.makedirs(checkpoints_path)
     return checkpoints_path
 
-def make_data_loaders( data_tensors_path : str , test_split : float = 0.3 , batch_size : int = 128 ):
-    inputs = torch.load( os.path.join( data_tensors_path , "inputs.pt" ) )
-    outputs = torch.load( os.path.join( data_tensors_path , "outputs.pt" ) )
-    ds = TensorDataset( inputs , outputs )
-    train_ds , test_ds = random_split( ds , [ 1 - test_split , test_split ] )
-    train_ds_loader = DataLoader( train_ds , batch_size , shuffle=True , drop_last=True )
-    test_ds_loader = DataLoader( test_ds , batch_size , shuffle=True , drop_last=True )
-    return train_ds_loader , test_ds_loader
-
-def get_batch_loader( data_tensors_path : str , batch_size , input_length ):
+def get_batch_loader( data_tensors_path , batch_size , input_length ):
     with open( os.path.join( data_tensors_path , "sequences.pkl" ) , "rb" ) as file:
         indexed_sequences = pickle.load( file )
     test_split_index = int( (1.0-data_config.test_split) * len( indexed_sequences ) )
@@ -109,13 +73,12 @@ def train_on_batch(model, batch_loader, optimizer):
     inputs , outputs = batch_loader()
     inputs , outputs = inputs.to( device ) , outputs.to( device )
     batch_size , seq_length = inputs.shape
-    optimizer.zero_grad()
+    optimizer.zero_grad( set_to_none=True )
     preds = model( inputs )
     preds = preds.view( batch_size * seq_length , data_config.vocab_size )
     targets = outputs.view( batch_size * seq_length ,  )
     loss = cross_entropy_loss(preds, targets)
     loss.backward()
-    torch.nn.utils.clip_grad_norm_( model.parameters(), 0.5 )
     optimizer.step()
     ppl = perplexity( loss )
     return loss.cpu().item() , ppl.cpu().item()
@@ -139,14 +102,11 @@ model = Transformer(
     embedding_dim=model_config.embedding_dim ,
     seq_length=data_config.seq_length ,
     num_blocks=model_config.num_blocks ,
-    num_heads_in_block=model_config.num_heads_in_block
+    num_heads_in_block=model_config.num_heads_in_block ,
+    dropout=model_config.dropout
 )
 model.to( device )
-optimizer = torch.optim.SGD( model.parameters() , lr=0.001 )
-optimizer = LearningRateScheduler( optimizer ,
-                                   train_config.lr_multiplier ,
-                                   model_config.embedding_dim ,
-                                   train_config.num_warmup_steps )
+optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rate )
 
 if train_config.wandb_logging_enabled:
     wandb.init(
@@ -161,15 +121,9 @@ train_batch_dispatcher , test_batch_dispatcher = get_batch_loader(
 )
 
 for iter in range( train_config.num_train_iter ):
-
     train_loss , train_ppl = train_on_batch(model, train_batch_dispatcher, optimizer)
-
-    if train_config.wandb_logging_enabled:
-        pass
-
-
-
     if iter % train_config.test_interval == 0 or iter == train_config.num_train_iter - 1:
+
         avg_val_loss = 0.0
         avg_val_ppl = 0.0
         for val_iter in range( train_config.num_test_iter ):
@@ -178,11 +132,16 @@ for iter in range( train_config.num_train_iter ):
             avg_val_ppl += val_ppl
         avg_val_loss /= train_config.num_test_iter
         avg_val_ppl /= train_config.num_test_iter
+
+        if train_config.wandb_logging_enabled:
+            log_metrics( train_loss , train_ppl , avg_val_loss , avg_val_ppl )
+
         print("{} loss={:.5f}, perplexity={:.5f} , val_loss={:.5f}, val_perplexity={:.5f}"
               .format(iter + 1, train_loss, train_ppl, avg_val_loss, avg_val_ppl))
+
         torch.save(
             model ,
-            os.path.join( ckpt_path , "model_{}.pt".format( iter + 1 ) )
+            os.path.join( ckpt_path , "model_{}.pt".format( iter ) )
         )
 
 
