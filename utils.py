@@ -5,11 +5,12 @@ import torch
 
 class Predictor:
 
-    def __init__( self , model , idx_to_word , word_to_idx , device , temperature ):
+    def __init__( self , model , idx_to_word , word_to_idx , device , temperature , seq_length ):
         self.model = model
         self.idx_to_word = idx_to_word
         self.word_to_idx = word_to_idx
         self.device = device
+        self.seq_length = seq_length
         self.temperature = temperature
         self.model.to( self.device )
 
@@ -24,9 +25,11 @@ class Predictor:
     def predict_tokens( self , input_seq  , num_tokens ):
         preds = []
         input_seq = [ self.word_to_idx[ word ] for word in input_seq ]
-        if len(input_seq) < 128:
-            diff = 128 - len(input_seq)
+        if len(input_seq) < self.seq_length:
+            diff = self.seq_length - len(input_seq)
             input_seq = [0 for _ in range(diff)] + input_seq
+        else:
+            input_seq = input_seq[ 0 : self.seq_length ]
         for i in range( num_tokens ):
             input_seq = torch.tensor( input_seq , device=self.device )
             predicted_token = self.predict_next_word( input_seq[ i : ] )

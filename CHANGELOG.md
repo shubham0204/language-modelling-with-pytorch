@@ -1,9 +1,9 @@
-`loss.py`: Added `perplexity` metric.
+`layers.py`: Replaced `torch.sqrt` with `math.sqrt`
 
-`train.py`: Prints `perplexity` instead of accuracy now. Added `LearningRateScheduler`
+`process_data.py`: Added filtering for numbers, sentence breaks and word-contractions.
 
-`process_data.py`: Added `[SEP]`, `[START]` and `[END]` tokens to sequences.
+`utils.py`: Added `seq_length` as argument to class `Predictor`
 
-`setup_env.sh`: It now unzips poems from 10 natural-like topics.
+`setup_env.sh`: Added `contractions` package for installation.
 
-`predict.py`: Added open-text generation with `num_tokens` argument.
+`predict.py`: Added `config.data.seq_length` to avoid hard-coding sequence length.

@@ -1,4 +1,5 @@
 import torch
+import math
 from torch import nn
 
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
@@ -100,7 +101,7 @@ class PositionalEncoding( nn.Module ):
         self.register_buffer( "pe" , positional_embeddings )
 
     def forward( self , inputs ):
-        x = inputs * torch.sqrt( self.embedding_dim )
+        x = inputs * math.sqrt( self.embedding_dim )
         x = x + self.pe
         return self.dropout( x )
 

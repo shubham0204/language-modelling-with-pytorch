@@ -1,4 +1,5 @@
 import itertools
+import contractions
 import os
 import pickle
 import random
@@ -9,38 +10,27 @@ from utils import save_dict_as_pickle
 
 config = load_global_config()
 data_config = config.data
-"""
-TODO:
-1. Use SGD
-2. Increase context length
-3. Change dataset
-4. Add free text generation in predict.py
-"""
+
 token_linebreak = "[SEP]"
 token_seq_start = "[START]"
 token_seq_end = "[END]"
 
-def filter_text( text_token : str ):
-    return re.sub(r"[^a-zA-Z ]+", "", text_token)
+number_regex = re.compile( r"(?:- ?)?\d+\.\d+|(?:- ?)?\d+" )
+sent_regex = re.compile( r"[A-Za-z](?:\.|\?|!)(?: \n?)?" )
+punc_regex = re.compile( r";|:|," )
+
+def filter_text(text : str):
+    text = contractions.fix( text , slang=False )
+    text = number_regex.sub( " [NUM] " , text )
+    text = punc_regex.sub( "" , text )
+    text = sent_regex.sub( " [SEP] " , text )
+    return text
 
 def get_tokens( poem_text : str ):
     poem_text = poem_text.lower()
     tokens = filter_text( poem_text ).split()
     tokens = [token for token in tokens if len(token.strip()) != 0]
     return tokens
-
-def pad_sequence( sequence , max_length ):
-    if len( sequence ) < max_length:
-        return sequence + [ 0 for _ in range( max_length - len( sequence ) ) ]
-    else:
-        return sequence[ 0 : max_length ]
-
-def make_sequences( sequence , input_length ):
-    sequences = []
-    for _ in range( 50 ):
-        i = random.randint( 0 , len( sequence ) - input_length - 2 )
-        sequences.append( [sequence[i: i + input_length] , sequence[i + 1: i + input_length + 1] ] )
-    return sequences
 
 if __name__ == "__main__":
     data_dir = data_config.data_path
@@ -54,7 +44,7 @@ if __name__ == "__main__":
     tokenized_sentences = []
     with open( os.path.join( data_dir , "dataset_articles.txt" ) , "r" , encoding="utf-8" ) as text_file:
         for line in text_file:
-            tokens = [ token_seq_start ] + get_tokens( line ) + [ token_seq_end ]
+            tokens = get_tokens( line )
             vocab += tokens
             tokenized_sentences.append( tokens )
     print( f"{len(tokenized_sentences)} sentences read." )
@@ -69,7 +59,7 @@ if __name__ == "__main__":
     save_global_config( config )
 
     tokenized_ds = itertools.chain( *tokenized_sentences )
-    idx_tokenized_ds = [word_to_index[ word] for word in tokenized_ds]
+    idx_tokenized_ds = [word_to_index[word] for word in tokenized_ds]
 
     with open( os.path.join( data_config.data_tensors_path , "sequences.pkl" ) , "wb" ) as file:
         pickle.dump( idx_tokenized_ds , file )

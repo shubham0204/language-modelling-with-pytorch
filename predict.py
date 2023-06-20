@@ -20,7 +20,7 @@ def predict( model_path ,
     model = torch.load( model_path , map_location=compute_device )
     idx_to_word = load_dict_from_pickle( os.path.join( data_tensors , "idx_to_word.pkl" ) )
     word_to_idx = load_dict_from_pickle( os.path.join( data_tensors , "word_to_idx.pkl" ) )
-    predictor = Predictor( model , idx_to_word , word_to_idx , compute_device , temperature )
+    predictor = Predictor( model , idx_to_word , word_to_idx , compute_device , temperature , config.data.seq_length )
     if not generate:
         input_str = input( "Enter some text: " )
         output = predictor.predict_tokens( get_tokens( input_str ) , num_tokens )
