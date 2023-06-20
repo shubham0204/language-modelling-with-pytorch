@@ -11,9 +11,8 @@ from utils import save_dict_as_pickle
 config = load_global_config()
 data_config = config.data
 
-token_linebreak = "[SEP]"
-token_seq_start = "[START]"
-token_seq_end = "[END]"
+token_linebreak = " [SEP] "
+token_number = " [NUM] "
 
 number_regex = re.compile( r"(?:- ?)?\d+\.\d+|(?:- ?)?\d+" )
 sent_regex = re.compile( r"(?:\.|\?|!)(?: \n?)?" )
@@ -21,9 +20,9 @@ punc_regex = re.compile( r";|:|," )
 
 def filter_text(text : str):
     text = contractions.fix( text , slang=False )
-    text = number_regex.sub( " [NUM] " , text )
+    text = number_regex.sub( token_number , text )
     text = punc_regex.sub( "" , text )
-    text = sent_regex.sub( " [SEP] " , text )
+    text = sent_regex.sub( token_linebreak , text )
     return text
 
 def get_tokens( poem_text : str ):

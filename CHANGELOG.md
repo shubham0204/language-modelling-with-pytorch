@@ -1,9 +1,5 @@
-`layers.py`: Replaced `torch.sqrt` with `math.sqrt`
+`train.py`: Added `torch.compile` and `torch.save` now saves `state_dict` of `model` and `optimizer`
 
-`process_data.py`: Added filtering for numbers, sentence breaks and word-contractions.
+`project_config.toml`: Added `compile_model`, `resume_training` and `resume_training_checkpoint_path` settings
 
-`utils.py`: Added `seq_length` as argument to class `Predictor`
-
-`setup_env.sh`: Added `contractions` package for installation.
-
-`predict.py`: Added `config.data.seq_length` to avoid hard-coding sequence length.
+`process_data.py`: Renamed `token_number` and `token_linebreak`

@@ -105,8 +105,19 @@ model = Transformer(
     num_heads_in_block=model_config.num_heads_in_block ,
     dropout=model_config.dropout
 )
-model.to( device )
 optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rate )
+
+if train_config.resume_training:
+    checkpoint = torch.load( train_config.resume_training_checkpoint_path )
+    model.load_state_dict( checkpoint['model_state_dict'] )
+    optimizer.load_state_dict( checkpoint['optimizer_state_dict'] )
+
+model.to(device)
+
+if train_config.compile_model:
+    execute_model = torch.compile( model )
+else:
+    execute_model = model
 
 if train_config.wandb_logging_enabled:
     wandb.init(
@@ -121,7 +132,7 @@ train_batch_dispatcher , test_batch_dispatcher = get_batch_loader(
 )
 
 for iter in range( train_config.num_train_iter ):
-    train_loss , train_ppl = train_on_batch(model, train_batch_dispatcher, optimizer)
+    train_loss , train_ppl = train_on_batch( execute_model, train_batch_dispatcher, optimizer )
     if iter % train_config.test_interval == 0 or iter == train_config.num_train_iter - 1:
 
         avg_val_loss = 0.0
@@ -140,7 +151,12 @@ for iter in range( train_config.num_train_iter ):
               .format(iter + 1, train_loss, train_ppl, avg_val_loss, avg_val_ppl))
 
         torch.save(
-            model ,
+            {
+                "model_state_dict": model.state_dict() ,
+                "optimizer_state_dict": optimizer.state_dict() ,
+                "train_loss": train_loss ,
+                "val_loss": avg_val_loss
+            } ,
             os.path.join( ckpt_path , "model_{}.pt".format( iter ) )
         )
 
