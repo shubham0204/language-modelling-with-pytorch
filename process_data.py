@@ -16,7 +16,7 @@ token_seq_start = "[START]"
 token_seq_end = "[END]"
 
 number_regex = re.compile( r"(?:- ?)?\d+\.\d+|(?:- ?)?\d+" )
-sent_regex = re.compile( r"[A-Za-z](?:\.|\?|!)(?: \n?)?" )
+sent_regex = re.compile( r"(?:\.|\?|!)(?: \n?)?" )
 punc_regex = re.compile( r";|:|," )
 
 def filter_text(text : str):
