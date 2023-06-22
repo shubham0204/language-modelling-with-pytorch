@@ -1,9 +1,9 @@
 import itertools
-import contractions
 import os
 import pickle
-import random
 import re
+
+import contractions
 
 from config import load_global_config, save_global_config
 from utils import save_dict_as_pickle

@@ -1,5 +1,5 @@
-`train.py`: Added `torch.compile` and `torch.save` now saves `state_dict` of `model` and `optimizer`
+`predict.py`: It now loads model's `state_dict` from a saved model
 
-`project_config.toml`: Added `compile_model`, `resume_training` and `resume_training_checkpoint_path` settings
+`train.py`: Added `model.to(device)` before initializing optimizer state.
 
-`process_data.py`: Renamed `token_number` and `token_linebreak`
+Sorted imports in the project.

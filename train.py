@@ -110,7 +110,11 @@ optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rat
 if train_config.resume_training:
     checkpoint = torch.load( train_config.resume_training_checkpoint_path )
     model.load_state_dict( checkpoint['model_state_dict'] )
+    model.to(device)
+    optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rate )
     optimizer.load_state_dict( checkpoint['optimizer_state_dict'] )
+else:
+    model.to(device)
 
 model.to(device)
 
