@@ -1,5 +1,2 @@
-`predict.py`: It now loads model's `state_dict` from a saved model
-
-`train.py`: Added `model.to(device)` before initializing optimizer state.
-
-Sorted imports in the project.
+`process_data.py`: Added word-stemming. The vocabulary of words now gets sorted to make a unique order, eliminating
+the randomness caused by unordered `set`

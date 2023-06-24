@@ -2,7 +2,7 @@ import itertools
 import os
 import pickle
 import re
-
+from nltk.stem import PorterStemmer
 import contractions
 
 from config import load_global_config, save_global_config
@@ -16,19 +16,23 @@ token_number = " [NUM] "
 
 number_regex = re.compile( r"(?:- ?)?\d+\.\d+|(?:- ?)?\d+" )
 sent_regex = re.compile( r"(?:\.|\?|!)(?: \n?)?" )
-punc_regex = re.compile( r";|:|," )
+punc_regex = re.compile( r""";|:|,|"|\{|\}|\[|\]|\'|\(|\)|“|”|’|‘|\/|-|…|@|™|—|_|\\|\*""" )
+non_ascii_regex = re.compile( r"[^\x00-\x7F]+" )
+ps = PorterStemmer()
 
 def filter_text(text : str):
     text = contractions.fix( text , slang=False )
     text = number_regex.sub( token_number , text )
-    text = punc_regex.sub( "" , text )
+    text = punc_regex.sub( " " , text )
+    text = non_ascii_regex.sub( " " , text )
     text = sent_regex.sub( token_linebreak , text )
     return text
 
 def get_tokens( poem_text : str ):
     poem_text = poem_text.lower()
     tokens = filter_text( poem_text ).split()
-    tokens = [token for token in tokens if len(token.strip()) != 0]
+    tokens = [ token for token in tokens if len(token.strip()) != 0]
+    tokens = [ ps.stem(token) for token in tokens if len(list(set(token))) > 1]
     return tokens
 
 if __name__ == "__main__":
@@ -48,6 +52,7 @@ if __name__ == "__main__":
             tokenized_sentences.append( tokens )
     print( f"{len(tokenized_sentences)} sentences read." )
     vocab = list( set( vocab ) )
+    vocab = list( sorted( vocab ) )
 
     index_to_word = dict( zip( range( 1 , len(vocab ) + 1 ) , vocab ) )
     word_to_index = dict( zip( vocab , range( 1 , len(vocab) + 1 ) ) )
