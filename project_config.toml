@@ -12,7 +12,7 @@ num_heads_in_block = 2
 dropout = 0.4
 
 [train]
-num_train_iter = 25000
+num_train_iter = 50000
 num_test_iter = 5000
 test_interval = 1000
 batch_size = 32

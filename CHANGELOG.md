@@ -1,2 +1,7 @@
-`process_data.py`: Added word-stemming. The vocabulary of words now gets sorted to make a unique order, eliminating
-the randomness caused by unordered `set`
+`process_data.py`: Removed `PorterStemmer` and added regex to remove hashtags.
+
+`train.py`: Added `print` statements for logging.
+
+`predict.py`: Added `print` statements for logging.
+
+`project_config.toml`: Increased `num_training_iter` to `50000`

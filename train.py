@@ -14,6 +14,7 @@ data_config = config.data
 train_config = config.train
 model_config = config.model
 device = torch.device( "cuda" if torch.cuda.is_available() else "cpu" )
+print( "Using device {} for training".format( device ) )
 
 torch.manual_seed( 1335 )
 
@@ -113,15 +114,19 @@ if train_config.resume_training:
     model.to(device)
     optimizer = torch.optim.AdamW( model.parameters() , lr=train_config.learning_rate )
     optimizer.load_state_dict( checkpoint['optimizer_state_dict'] )
+    print( "Resuming training with model {}".format( train_config.resume_training_checkpoint_path ) )
 else:
     model.to(device)
+    print( "No checkpoint loaded")
 
 model.to(device)
 
 if train_config.compile_model:
     execute_model = torch.compile( model )
+    print( "Model compiled with torch.compile" )
 else:
     execute_model = model
+    print( "Training uncompiled model" )
 
 if train_config.wandb_logging_enabled:
     wandb.init(
@@ -136,9 +141,10 @@ train_batch_dispatcher , test_batch_dispatcher = get_batch_loader(
 )
 
 for iter in range( train_config.num_train_iter ):
-    train_loss , train_ppl = train_on_batch( execute_model, train_batch_dispatcher, optimizer )
-    if iter % train_config.test_interval == 0 or iter == train_config.num_train_iter - 1:
 
+    train_loss , train_ppl = train_on_batch( execute_model, train_batch_dispatcher, optimizer )
+
+    if iter % train_config.test_interval == 0 or iter == train_config.num_train_iter - 1:
         avg_val_loss = 0.0
         avg_val_ppl = 0.0
         for val_iter in range( train_config.num_test_iter ):
@@ -152,7 +158,7 @@ for iter in range( train_config.num_train_iter ):
             log_metrics( train_loss , train_ppl , avg_val_loss , avg_val_ppl )
 
         print("{} loss={:.5f}, perplexity={:.5f} , val_loss={:.5f}, val_perplexity={:.5f}"
-              .format(iter + 1, train_loss, train_ppl, avg_val_loss, avg_val_ppl))
+              .format(iter, train_loss, train_ppl, avg_val_loss, avg_val_ppl))
 
         torch.save(
             {

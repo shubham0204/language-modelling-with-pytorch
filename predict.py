@@ -20,7 +20,9 @@ def predict( model_path ,
              data_tensors = config.data.data_tensors_path ,
              temperature = 1.0 ,
              device="cuda" ):
+
     compute_device = torch.device( device )
+    print( "Using device {} for inference".format( compute_device ) )
     model = Transformer(
         vocab_size=data_config.vocab_size,
         embedding_dim=model_config.embedding_dim,
@@ -31,19 +33,20 @@ def predict( model_path ,
     )
     checkpoint = torch.load( model_path )
     model.load_state_dict(checkpoint['model_state_dict'])
-    model.to(device)
+    model.to( compute_device )
+    model.eval()
+
     idx_to_word = load_dict_from_pickle( os.path.join( data_tensors , "idx_to_word.pkl" ) )
     word_to_idx = load_dict_from_pickle( os.path.join( data_tensors , "word_to_idx.pkl" ) )
     predictor = Predictor( model , idx_to_word , word_to_idx , compute_device , temperature , config.data.seq_length )
     if not generate:
-        input_str = input( "Enter some text: " )
+        input_str = input( "Prompt: " )
         output = predictor.predict_tokens( get_tokens( input_str ) , num_tokens )
     else:
         output = predictor.generate_text( num_tokens , config.data.seq_length )
-    for i in range( len( output ) ):
-        if output[ i ] == "[SEP]":
-            output[ i ] = "\n"
-    print( " ".join( output ) )
+    output = " ".join( output )
+    output = output.replace( "[SEP]" , "\n" )
+    print( "Generated text: \n{}".format( output ) )
 
 if __name__ == "__main__":
     fire.Fire( predict )

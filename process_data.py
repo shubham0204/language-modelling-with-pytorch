@@ -2,7 +2,6 @@ import itertools
 import os
 import pickle
 import re
-from nltk.stem import PorterStemmer
 import contractions
 
 from config import load_global_config, save_global_config
@@ -18,7 +17,7 @@ number_regex = re.compile( r"(?:- ?)?\d+\.\d+|(?:- ?)?\d+" )
 sent_regex = re.compile( r"(?:\.|\?|!)(?: \n?)?" )
 punc_regex = re.compile( r""";|:|,|"|\{|\}|\[|\]|\'|\(|\)|“|”|’|‘|\/|-|…|@|™|—|_|\\|\*""" )
 non_ascii_regex = re.compile( r"[^\x00-\x7F]+" )
-ps = PorterStemmer()
+hashtag_regex = re.compile( r"(?<!\S)#(\S+)" )
 
 def filter_text(text : str):
     text = contractions.fix( text , slang=False )
@@ -26,13 +25,13 @@ def filter_text(text : str):
     text = punc_regex.sub( " " , text )
     text = non_ascii_regex.sub( " " , text )
     text = sent_regex.sub( token_linebreak , text )
+    text = hashtag_regex.sub( " " , text )
     return text
 
 def get_tokens( poem_text : str ):
     poem_text = poem_text.lower()
     tokens = filter_text( poem_text ).split()
     tokens = [ token for token in tokens if len(token.strip()) != 0]
-    tokens = [ ps.stem(token) for token in tokens if len(list(set(token))) > 1]
     return tokens
 
 if __name__ == "__main__":
