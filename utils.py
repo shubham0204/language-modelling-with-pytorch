@@ -49,6 +49,13 @@ class Predictor:
             input_seq.append(self.word_to_idx[predicted_token])
         return preds
 
+    @classmethod
+    def beautify_output( cls , predicted_tokens ):
+        text = " ".join( [ token.strip() for token in predicted_tokens ] )
+        lines = text.split( "[SEP]" )
+        lines = [ line.capitalize() for line in lines if len( line.strip().split() ) > 3 ]
+        return ". ".join( lines )
+
 
 def save_dict_as_pickle( data : dict , filename : str ):
     with open( filename , "wb" ) as file:

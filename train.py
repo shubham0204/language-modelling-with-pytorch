@@ -140,6 +140,7 @@ train_batch_dispatcher , test_batch_dispatcher = get_batch_loader(
     data_config.seq_length
 )
 
+prev_val_loss = 1e+5
 for iter in range( train_config.num_train_iter ):
 
     train_loss , train_ppl = train_on_batch( execute_model, train_batch_dispatcher, optimizer )
@@ -160,14 +161,17 @@ for iter in range( train_config.num_train_iter ):
         print("{} loss={:.5f}, perplexity={:.5f} , val_loss={:.5f}, val_perplexity={:.5f}"
               .format(iter, train_loss, train_ppl, avg_val_loss, avg_val_ppl))
 
-        torch.save(
-            {
-                "model_state_dict": model.state_dict() ,
-                "optimizer_state_dict": optimizer.state_dict() ,
-                "train_loss": train_loss ,
-                "val_loss": avg_val_loss
-            } ,
-            os.path.join( ckpt_path , "model_{}.pt".format( iter ) )
-        )
+        if avg_val_loss < prev_val_loss:
+            prev_val_loss = avg_val_loss
+            torch.save(
+                {
+                    "model_state_dict": model.state_dict() ,
+                    "optimizer_state_dict": optimizer.state_dict() ,
+                    "train_loss": train_loss ,
+                    "val_loss": avg_val_loss ,
+                    "config": config
+                } ,
+                os.path.join( ckpt_path , "model_{}.pt".format( iter ) )
+            )
 
 

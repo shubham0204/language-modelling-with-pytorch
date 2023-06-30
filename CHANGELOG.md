@@ -1,7 +1,7 @@
 `process_data.py`: Removed `PorterStemmer` and added regex to remove hashtags.
 
-`train.py`: Added `print` statements for logging.
+`train.py`: `config` is now saved in each model with `torch.save`. Only the best model gets saved overtime.
 
-`predict.py`: Added `print` statements for logging.
+`predict.py`: The model is now constructed with the `config` loaded from `checkpoint`
 
-`project_config.toml`: Increased `num_training_iter` to `50000`
+`utils.py`: Added `beautify_output` method to format model output.

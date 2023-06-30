@@ -11,7 +11,6 @@ from utils import load_dict_from_pickle
 
 config = load_global_config()
 data_config = config.data
-train_config = config.train
 model_config = config.model
 
 def predict( model_path ,
@@ -23,6 +22,10 @@ def predict( model_path ,
 
     compute_device = torch.device( device )
     print( "Using device {} for inference".format( compute_device ) )
+    checkpoint = torch.load(model_path)
+    config = checkpoint[ "config" ]
+    data_config = config.data
+    model_config = config.model
     model = Transformer(
         vocab_size=data_config.vocab_size,
         embedding_dim=model_config.embedding_dim,
@@ -31,7 +34,6 @@ def predict( model_path ,
         num_heads_in_block=model_config.num_heads_in_block,
         dropout=model_config.dropout
     )
-    checkpoint = torch.load( model_path )
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to( compute_device )
     model.eval()
@@ -44,8 +46,7 @@ def predict( model_path ,
         output = predictor.predict_tokens( get_tokens( input_str ) , num_tokens )
     else:
         output = predictor.generate_text( num_tokens , config.data.seq_length )
-    output = " ".join( output )
-    output = output.replace( "[SEP]" , "\n" )
+    output = Predictor.beautify_output( output )
     print( "Generated text: \n{}".format( output ) )
 
 if __name__ == "__main__":
