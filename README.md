@@ -59,37 +59,66 @@ of a single batch of data, and a back-pass to update the parameters.
 - `num_test_iter` (`int`): The number of iterations to be performed on the test dataset.
 - `test_interval` (`int`): The number of iterations after which testing should be performed.
 - `batch_size` (`int`): Number of samples present in a batch.
-- `learning_rate` (`float`): The learning rate used by the `optimizer` in `train.py`
+- `learning_rate` (`float`): The learning rate used by the `optimizer` in `train.py`.
 - `checkpoint_path` (`str`): Path where checkpoints will be saved during training.
-- `wandb_logging_enabled` (`bool`): Enable/disable logging to Weights&Biases console in `train.py` 
-- `wandb_project_name` (`str`): If logging is enabled, the name of the `project` that is to be used for W&B
-- `resume_training` (`bool`):
-- `resume_training_checkpoint_path` (`str`):
-- `compile_model` (`bool`):
+- `wandb_logging_enabled` (`bool`): Enable/disable logging to Weights&Biases console in `train.py`.
+- `wandb_project_name` (`str`): If logging is enabled, the name of the `project` that is to be used for W&B.
+- `resume_training` (`bool`): If `True`, a checkpoint will be loaded and training will be resumed.
+- `resume_training_checkpoint_path` (`str`): If `resume_training = True`, the checkpoint will be loaded from this path. 
+- `compile_model` (`bool`): Whether to use `torch.compile` to speedup training in `train.py`
 
 ### `data` configuration
 
-- `vocab_size` (`int`): The number of tokens in the vocabulary. This variable is set when `process_data.py` script is executed.
-- `test_split` (`float`): 
-- `seq_length` (`int`):
-- `data_path` (`str`):
-- `data_tensors_path` (`str`):
+- `vocab_size` (`int`): Number of tokens in the vocabulary. This variable is set when `process_data.py` script is executed.
+- `test_split` (`float`): Fraction of data used for testing the model.
+- `seq_length` (`int`): Context length of the model. Input sequences of `seq_length` will be produced in `train.py` to train the model.
+- `data_path` (`str`): Path of the text file containing the articles.
+- `data_tensors_path` (`str`): Path of the directory where tensors of processed data will be stored.
 
 ### `model` configuration
 
-- `embedding_dim` (`int`):
-- `num_blocks` (`int`):
-- `num_heads_in_block` (`int`):
-- `dropout` (`float`):
+- `embedding_dim` (`int`): Dimensions of the output embedding for `torch.nn.Embedding`.
+- `num_blocks` (`int`): Number of blocks to be used in the transformer model. A single block contains `MultiHeadAttention`, 
+`LayerNorm` and `Linear` layers. See `layers.py`.
+- `num_heads_in_block` (`int`): Number of heads used in `MultiHeadAttention`.
+- `dropout` (`float`): Dropout rate for the transformer.
 
 ### `deploy` configuration
 
-- `host` (`str`):
-- `port` (`int`):
+- `host` (`str`): Host IP used to deploy API endpoints.
+- `port` (`int`): Port through which API endpoints will be exposed.
 
 ## Deployment
 
-### API Endpoints with FastAPI
+The trained ML model can be deployed in two ways, 
+
+* As a [Streamlit]() app
+* As an API endpoint with [FastAPI]()
 
 ### Web app with Streamlit
+
+The model can be used with a [StreamLit]() app easily,
+
+```commandline
+$> (project_env) streamlit run app.py
+```
+
+In the app, we need to select a model for inference, the `data_tensors_path` (required for tokenization) and other
+ parameters like number of words to generate and the temperature.
+
+### API Endpoints with FastAPI
+
+The model can be accessed with REST APIs built with [FastAPI](),
+
+```commandline
+$> (project_env) uvicorn api:server
+```
+
+A `GET` request at the `/predict` endpoint with query parameters `prompt`, `num_tokens` and `temperature` can 
+be initiated to generate a response from the model,
+
+```commandline
+curl --location 'http://127.0.0.1:8000/predict?prompt=prompt_text_here&temperature=1.0&num_tokens=100'
+```
+
 

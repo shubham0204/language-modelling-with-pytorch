@@ -13,11 +13,7 @@ predictor = Predictor( model_path , data_tensors_path , compute_device )
 
 @server.get( "/predict" )
 async def predict( prompt : str , num_tokens : int , temperature : float = 1.0 ):
-    print( prompt )
     output = predictor.predict_tokens( get_tokens( prompt ) , num_tokens , temperature )
     output = Predictor.beautify_output(output)
     return { "response": output }
 
-@server.get( "/test" )
-async def test():
-    return { "Server is active." }
