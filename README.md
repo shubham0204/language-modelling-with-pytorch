@@ -1,7 +1,13 @@
 # Implementing Transformers with PyTorch - GPT (Decoder)
-> Language modelling with the WikiHow dataset
+> Language modelling with the WikiHow dataset by implementing a transformer model (decoder) in PyTorch. Text is read 
+> from a static source (a text file), processed, tokenized for training. After training, the model can be inferred 
+> from a CLI-tool, a web app and a HTTP API.
 
+## Features
 
+- Data, training and model configuration managed with a single TOML file
+- HTTP API ([FastAPI](https://fastapi.tiangolo.com/)) and web-application ([Streamlit](https://streamlit.io/)) for testing the model
+- Metrics logging with [Weights & Biases](https://wandb.ai/site)
 
 ## Setup
 
