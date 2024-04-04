@@ -48,7 +48,7 @@ def get_batch_loader(data_tensors_path: str, batch_size: int, input_length: int)
     train_indexed_sequences = indexed_sequences[:test_split_index]
     test_indexed_sequences = indexed_sequences[test_split_index:]
 
-    def get_train_batch() -> tuple[torch.Tensor,torch.Tensor]:
+    def get_train_batch() -> tuple[torch.Tensor, torch.Tensor]:
         random_indices = torch.randint(
             0, len(train_indexed_sequences) - input_length - 2, size=(batch_size,)
         )
@@ -66,7 +66,7 @@ def get_batch_loader(data_tensors_path: str, batch_size: int, input_length: int)
         )
         return inputs, outputs
 
-    def get_test_batch() -> tuple[torch.Tensor,torch.Tensor]:
+    def get_test_batch() -> tuple[torch.Tensor, torch.Tensor]:
         random_indices = torch.randint(
             0, len(test_indexed_sequences) - input_length - 2, size=(batch_size,)
         )
@@ -130,7 +130,9 @@ model = Transformer(
     num_heads_in_block=model_config.num_heads_in_block,
     dropout=model_config.dropout,
 )
-optimizer: torch.optim.Optimizer = torch.optim.AdamW(model.parameters(), lr=train_config.learning_rate)
+optimizer: torch.optim.Optimizer = torch.optim.AdamW(
+    model.parameters(), lr=train_config.learning_rate
+)
 
 if train_config.resume_training:
     checkpoint = torch.load(train_config.resume_training_checkpoint_path)
@@ -202,7 +204,7 @@ for iter in range(train_config.num_train_iter):
                     "optimizer_state_dict": optimizer.state_dict(),
                     "train_loss": train_loss,
                     "val_loss": avg_val_loss,
-                    "config": config,
+                    "config": GlobalConfig.config,
                 },
                 os.path.join(ckpt_path, "model_{}.pt".format(iter)),
             )

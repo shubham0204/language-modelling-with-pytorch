@@ -1,8 +1,8 @@
 import munch
 import toml
 
-class GlobalConfig:
 
+class GlobalConfig:
     @classmethod
     def load_global_config(filepath: str = "project_config.toml"):
         return munch.munchify(toml.load(filepath))

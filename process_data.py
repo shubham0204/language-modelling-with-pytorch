@@ -61,8 +61,8 @@ if __name__ == "__main__":
     vocab = list(set(vocab))
     vocab = list(sorted(vocab))
 
-    index_to_word: dict[int,str] = dict(zip(range(1, len(vocab) + 1), vocab))
-    word_to_index: dict[str,int] = dict(zip(vocab, range(1, len(vocab) + 1)))
+    index_to_word: dict[int, str] = dict(zip(range(1, len(vocab) + 1), vocab))
+    word_to_index: dict[str, int] = dict(zip(vocab, range(1, len(vocab) + 1)))
     save_dict_as_pickle(index_to_word, os.path.join(output_dir, "idx_to_word.pkl"))
     save_dict_as_pickle(word_to_index, os.path.join(output_dir, "word_to_idx.pkl"))
     config.data.vocab_size = len(index_to_word) + 1
